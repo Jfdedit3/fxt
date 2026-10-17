@@ -43,8 +43,8 @@ function mediaOf(post) {
   if (!media || typeof media !== "object") return [];
   const all = Array.isArray(media.all) ? media.all : [];
   const fallback = [
-    ...(Array.isArray(media.photos) ? media.photos : []),
-    ...(Array.isArray(media.videos) ? media.videos : [])
+    ...(Array.isArray(media.photos) ? media.photos.map(item => ({ ...item, type: item?.type || "photo" })) : []),
+    ...(Array.isArray(media.videos) ? media.videos.map(item => ({ ...item, type: item?.type || "video" })) : [])
   ];
   const source = all.length ? all : fallback;
   return source.filter(item => item && typeof item === "object");
