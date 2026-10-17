@@ -31,7 +31,7 @@ async function getPost(username, id) {
     });
     if (!response.ok) return null;
     const data = await response.json();
-    const post = data?.tweet || data?.data?.tweet || data?.data || null;
+    const post = data?.tweet || data?.status || data?.data?.tweet || data?.data?.status || data?.data || null;
     return post && typeof post === "object" ? post : null;
   } catch {
     return null;
@@ -41,13 +41,30 @@ async function getPost(username, id) {
 function mediaOf(post) {
   const media = post?.media;
   if (!media || typeof media !== "object") return [];
+
+  // "all" normally preserves the post's display order, but some API responses
+  // expose only part of the attachments there. Merge photos/videos as a safety net.
   const all = Array.isArray(media.all) ? media.all : [];
-  const fallback = [
-    ...(Array.isArray(media.photos) ? media.photos.map(item => ({ ...item, type: item?.type || "photo" })) : []),
-    ...(Array.isArray(media.videos) ? media.videos.map(item => ({ ...item, type: item?.type || "video" })) : [])
-  ];
-  const source = all.length ? all : fallback;
-  return source.filter(item => item && typeof item === "object");
+  const photos = Array.isArray(media.photos)
+    ? media.photos.map(item => ({ ...item, type: item?.type || "photo" }))
+    : [];
+  const videos = Array.isArray(media.videos)
+    ? media.videos.map(item => ({ ...item, type: item?.type || "video" }))
+    : [];
+  const external = media.external && typeof media.external === "object"
+    ? [{ ...media.external, type: media.external.type || "video" }]
+    : [];
+  const combined = [...all, ...photos, ...videos, ...external];
+  const seen = new Set();
+
+  return combined.filter(item => {
+    if (!item || typeof item !== "object") return false;
+    const url = item.url || item.media_url || item.media_url_https || item.thumbnail_url || "";
+    const key = String(item.id || url);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return Boolean(url || item.thumbnail_url || item.thumbnail);
+  });
 }
 
 function postText(post) {
