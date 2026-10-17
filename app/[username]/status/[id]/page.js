@@ -93,6 +93,20 @@ function safeExternalUrl(value) {
   }
 }
 
+function videoPlaybackUrl(value) {
+  const safeUrl = safeExternalUrl(value);
+  if (!safeUrl) return null;
+  try {
+    const url = new URL(safeUrl);
+    // X video URLs often need byte-range requests for seeking and reliable playback.
+    // Proxy only the known video host; other providers remain direct links.
+    if (url.protocol === "https:" && url.hostname.toLowerCase() === "video.twimg.com") {
+      return `/api/video?url=${encodeURIComponent(url.href)}`;
+    }
+  } catch {}
+  return safeUrl;
+}
+
 function displayDate(value) {
   if (!value) return null;
   const date = new Date(value);
@@ -185,12 +199,13 @@ export default async function PostPage({ params }) {
         <p className="postText">{postText(post) || "This post contains media."}</p>
         {media.map((item, index) => {
           const source = safeExternalUrl(mediaUrl(item));
+          const playbackSource = isVideo(item) && source ? videoPlaybackUrl(source) : source;
           const poster = safeExternalUrl(thumbnailUrl(item));
           if (!source && !poster) return null;
-          if (isVideo(item) && source) {
+          if (isVideo(item) && playbackSource) {
             return (
               <video className="postMedia" key={index} controls playsInline preload="metadata" poster={poster || undefined}>
-                <source src={source} type={item.content_type || "video/mp4"} />
+                <source src={playbackSource} type={item.content_type || "video/mp4"} />
                 Your browser does not support embedded video.
               </video>
             );
