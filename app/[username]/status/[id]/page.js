@@ -23,19 +23,42 @@ function siteOrigin() {
 
 async function getPost(username, id) {
   if (!validParams(username, id)) return null;
-  try {
-    const response = await fetch(`${API_BASE}/${encodeURIComponent(username)}/status/${encodeURIComponent(id)}`, {
-      headers: { Accept: "application/json" },
-      signal: AbortSignal.timeout(8000),
-      next: { revalidate: 60 }
-    });
-    if (!response.ok) return null;
-    const data = await response.json();
-    const post = data?.tweet || data?.status || data?.data?.tweet || data?.data?.status || data?.data || null;
-    return post && typeof post === "object" ? post : null;
-  } catch {
-    return null;
+
+  // Prefer FxTwitter API v2: its status.media.all represents the complete
+  // attachment list. Fall back to the legacy endpoint if v2 is unavailable.
+  const endpoints = [
+    `${API_BASE}/2/status/${encodeURIComponent(id)}`,
+    `${API_BASE}/${encodeURIComponent(username)}/status/${encodeURIComponent(id)}`
+  ];
+
+  for (const endpoint of endpoints) {
+    try {
+      const response = await fetch(endpoint, {
+        headers: { Accept: "application/json" },
+        signal: AbortSignal.timeout(8000),
+        next: { revalidate: 60 }
+      });
+      if (!response.ok) continue;
+
+      const data = await response.json();
+      const post =
+        data?.status ||
+        data?.tweet ||
+        data?.data?.status ||
+        data?.data?.tweet ||
+        data?.data ||
+        null;
+
+      if (post && typeof post === "object" && post.media && typeof post.media === "object") {
+        return post;
+      }
+      if (post && typeof post === "object") return post;
+    } catch {
+      // Try the next compatible endpoint.
+    }
   }
+
+  return null;
 }
 
 function mediaOf(post) {
