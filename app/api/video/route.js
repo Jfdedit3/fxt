@@ -35,7 +35,6 @@ export async function GET(request) {
       method: "GET",
       headers,
       redirect: "follow",
-      signal: AbortSignal.timeout(25000),
       cache: "no-store"
     });
   } catch {
