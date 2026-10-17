@@ -144,6 +144,19 @@ function safeExternalUrl(value) {
   }
 }
 
+function previewImage(post) {
+  // Chat clients may display only one image: use the upstream collage for albums.
+  const photos = mediaOf(post).filter(item =>
+    !isVideo(item) && safeExternalUrl(mediaUrl(item))
+  );
+  if (photos.length > 1) {
+    const formats = post?.media?.mosaic?.formats;
+    const mosaic = safeExternalUrl(formats?.jpeg) || safeExternalUrl(formats?.webp);
+    if (mosaic) return mosaic;
+  }
+  return safeExternalUrl(firstImage(post));
+}
+
 function videoPlaybackUrl(value) {
   const safeUrl = safeExternalUrl(value);
   if (!safeUrl) return null;
@@ -179,7 +192,7 @@ export async function generateMetadata({ params }) {
   const text = postText(post);
   const title = post ? `${authorName(post)} (@${authorHandle(post, username)}) on X` : "X post preview";
   const description = (text || `View the original post by @${username} on X.`).slice(0, 300);
-  const image = safeExternalUrl(firstImage(post));
+  const image = previewImage(post);
   const video = mediaOf(post).find(isVideo);
   const videoUrl = safeExternalUrl(mediaUrl(video));
   const canonical = `${siteOrigin()}/${encodeURIComponent(username)}/status/${id}`;
