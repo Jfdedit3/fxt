@@ -26,7 +26,7 @@ The post page includes a working **Copy Fxt link** button. Post identifiers and 
 
 This project currently retrieves post data from the public `api.fxtwitter.com` endpoint. It is a separate front end and metadata renderer, but **it is not an independent data provider**. Availability, rate limits, API response formats, and media access depend on that upstream service. A true independent provider would require a supported data source or separately maintained compatible backend.
 
-The app does not intentionally maintain a public feed or database of requested posts. It does not bypass private or restricted posts. Do not treat this initial implementation as production-hardened against abuse; add platform-level rate limiting and monitoring before operating it at scale.
+The video proxy only accepts HTTPS URLs hosted on `video.twimg.com` and forwards HTTP Range requests so browsers can buffer and seek within the stream. It does not download or permanently store video files. The app does not intentionally maintain a public feed or database of requested posts. It does not bypass private or restricted posts. Do not treat this initial implementation as production-hardened against abuse; add platform-level rate limiting and monitoring before operating it at scale.
 
 ## Features
 
@@ -34,6 +34,7 @@ The app does not intentionally maintain a public feed or database of requested p
 - Validation for X/Twitter status URLs and route parameters.
 - Server-rendered Open Graph and Twitter Card metadata.
 - Post text, author, avatar, images, and video when supplied by the upstream API.
+- Byte-range streaming proxy for X-hosted MP4 videos, to improve buffering and seeking.
 - Copyable Fxt share URL.
 - Graceful handling of unavailable or private posts.
 - Bounded upstream request timeouts and short response caching.
