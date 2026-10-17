@@ -62,31 +62,38 @@ async function getPost(username, id) {
 }
 
 function mediaOf(post) {
-  const media = post?.media;
-  if (!media || typeof media !== "object") return [];
+  const containers = [
+    post?.media,
+    post?.extended_entities,
+    post?.entities,
+    post?.legacy?.extended_entities,
+    post?.legacy?.entities
+  ].filter(value => value && typeof value === "object");
 
-  // "all" normally preserves the post's display order, but some API responses
-  // expose only part of the attachments there. Merge photos/videos as a safety net.
-  const all = Array.isArray(media.all) ? media.all : [];
-  const photos = Array.isArray(media.photos)
-    ? media.photos.map(item => ({ ...item, type: item?.type || "photo" }))
-    : [];
-  const videos = Array.isArray(media.videos)
-    ? media.videos.map(item => ({ ...item, type: item?.type || "video" }))
-    : [];
-  const external = media.external && typeof media.external === "object"
-    ? [{ ...media.external, type: media.external.type || "video" }]
-    : [];
-  const combined = [...all, ...photos, ...videos, ...external];
-  const seen = new Set();
+  const combined = [];
+  for (const media of containers) {
+    if (Array.isArray(media.all)) combined.push(...media.all);
+    if (Array.isArray(media.photos)) combined.push(...media.photos.map(item => ({ ...item, type: item?.type || "photo" })));
+    if (Array.isArray(media.videos)) combined.push(...media.videos.map(item => ({ ...item, type: item?.type || "video" })));
+    if (Array.isArray(media.media)) combined.push(...media.media);
+    if (media.external && typeof media.external === "object") {
+      combined.push({ ...media.external, type: media.external.type || "video" });
+    }
+    if (media.mosaic && typeof media.mosaic === "object") {
+      combined.push({ ...media.mosaic, type: media.mosaic.type || "mosaic_photo" });
+    }
+  }
 
+  const seenUrls = new Set();
   return combined.filter(item => {
     if (!item || typeof item !== "object") return false;
-    const url = item.url || item.media_url || item.media_url_https || item.thumbnail_url || "";
-    const key = String(item.id || url);
-    if (!key || seen.has(key)) return false;
-    seen.add(key);
-    return Boolean(url || item.thumbnail_url || item.thumbnail);
+    const url = item.url || item.media_url_https || item.media_url || item.thumbnail_url || item.thumbnail || "";
+    // Prefer the media URL as identity: some API variants reuse the same item ID
+    // across attachments, which would otherwise incorrectly hide later images/videos.
+    const key = String(url || item.id || "");
+    if (!key || seenUrls.has(key)) return false;
+    seenUrls.add(key);
+    return true;
   });
 }
 
