@@ -34,7 +34,11 @@ async function getPost(username, id) {
   for (const endpoint of endpoints) {
     try {
       const response = await fetch(endpoint, {
-        headers: { Accept: "application/json" },
+        headers: {
+          Accept: "application/json",
+          // FxTwitter API v2 rejects requests without an identifiable User-Agent.
+          "User-Agent": "FxtPreview/1.0 (+https://fxt-pi.vercel.app)"
+        },
         signal: AbortSignal.timeout(8000),
         next: { revalidate: 60 }
       });
