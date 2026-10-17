@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import CopyLinkButton from "./CopyLinkButton";
+import PostDetails, { AuthorDetails, PostContext, PostStatistics } from "./PostDetails";
+import { metadataDescription, postText, safeExternalUrl } from "../../../post-info.mjs";
 
 const API_BASE = "https://api.fxtwitter.com";
 const USERNAME_RE = /^[a-zA-Z0-9_]{1,50}$/;
@@ -101,10 +103,6 @@ function mediaOf(post) {
   });
 }
 
-function postText(post) {
-  return String(post?.text || post?.raw_text || post?.description || "").trim();
-}
-
 function authorName(post) {
   return post?.author?.name || post?.author?.screen_name || post?.user?.name || "X user";
 }
@@ -132,16 +130,6 @@ function firstImage(post) {
     if (image) return image;
   }
   return null;
-}
-
-function safeExternalUrl(value) {
-  if (typeof value !== "string") return null;
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" || url.protocol === "http:" ? url.href : null;
-  } catch {
-    return null;
-  }
 }
 
 function previewImage(post) {
@@ -189,9 +177,8 @@ export async function generateMetadata({ params }) {
   }
 
   const post = await getPost(username, id);
-  const text = postText(post);
   const title = post ? `${authorName(post)} (@${authorHandle(post, username)}) on X` : "X post preview";
-  const description = (text || `View the original post by @${username} on X.`).slice(0, 300);
+  const description = metadataDescription(post, username);
   const image = previewImage(post);
   const video = mediaOf(post).find(isVideo);
   const videoUrl = safeExternalUrl(mediaUrl(video));
@@ -257,9 +244,11 @@ export default async function PostPage({ params }) {
         <div className="postBadge"><span className="pulse" /> X POST PREVIEW</div>
         <header className="author">
           {avatar ? <img src={avatar} alt="" className="avatar" /> : <div className="avatar avatarFallback">{authorName(post).slice(0, 1).toUpperCase()}</div>}
-          <div><strong>{authorName(post)}</strong><span>@{authorHandle(post, username)}</span></div>
+          <div><strong>{authorName(post)}{(author.verification?.verified === true || author.verified === true) && <span className="verifiedBadge" title="Verified on X" aria-label="Verified on X"> ✓</span>}</strong><span>@{authorHandle(post, username)}</span></div>
           <a className="xIcon" href={originalUrl} target="_blank" rel="noreferrer" aria-label="Open original post">𝕏</a>
         </header>
+        <AuthorDetails author={author} />
+        <PostContext post={post} />
         <p className="postText">{postText(post) || "This post contains media."}</p>
         {media.map((item, index) => {
           const source = safeExternalUrl(mediaUrl(item));
@@ -277,17 +266,19 @@ export default async function PostPage({ params }) {
           const image = source || poster;
           return (
             <a key={index} href={image} target="_blank" rel="noreferrer">
-              <img className="postMedia" src={image} alt={`Media ${index + 1} from post`} loading="lazy" />
+              <img className="postMedia" src={image} alt={typeof item.altText === "string" && item.altText.trim() ? item.altText : `Media ${index + 1} from post`} loading="lazy" />
             </a>
           );
         })}
+        <PostDetails post={post} />
         {date && <p className="timestamp">{date}</p>}
+        <PostStatistics post={post} />
         <div className="postActions">
           <a href={originalUrl} target="_blank" rel="noreferrer">View on X ↗</a>
           <CopyLinkButton url={currentUrl} />
         </div>
       </article>
-      <p className="privacyNote">Fxt fetches post details on demand. Availability depends on the upstream source and the visibility of the post.</p>
+      <p className="privacyNote">Post details and counts may be cached for up to 60 seconds. Availability depends on the upstream source and the visibility of the post.</p>
     </main>
   );
 }

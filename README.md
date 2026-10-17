@@ -34,9 +34,16 @@ The video proxy only accepts HTTPS URLs hosted on `video.twimg.com` and forwards
 - Validation for X/Twitter status URLs and route parameters.
 - Server-rendered Open Graph and Twitter Card metadata.
 - Post text, author, avatar, images, and video when supplied by the upstream API.
+- Photo mosaics in share previews for multi-image posts.
+- Likes, reposts, replies, quotes, bookmarks, and views when provided (missing counts stay hidden).
+- Expandable author biography, follower counts, location, website, and verification indicator.
+- Reply context, quoted posts, poll results, link cards, community notes, and post language when supplied by the API.
+- Engagement counts in Open Graph and Twitter Card descriptions. Counts may be cached for 60 seconds; poll voting remains on X.
 - Byte-range streaming proxy for X-hosted MP4 videos, to improve buffering and seeking.
 - Copyable Fxt share URL.
 - Graceful handling of unavailable or private posts.
 - Bounded upstream request timeouts and short response caching.
 
 X and Twitter are trademarks of their respective owners. This project is not affiliated with X Corp.
+
+Run the post information regression checks with `node --test tests/post-info.test.mjs`.
