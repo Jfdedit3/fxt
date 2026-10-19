@@ -40,7 +40,8 @@ The video proxy only accepts HTTPS URLs hosted on `video.twimg.com` and forwards
 - Clickable author avatars and names open a public profile on Fxt (`/username`), with a banner, biography, join date, account counts, and paginated Posts, Posts & replies, and Media feeds.
 - Reply context, quoted posts, poll results, link cards, community notes, and post language when supplied by the API.
 - Engagement counts in Open Graph and Twitter Card descriptions. Counts may be cached for 60 seconds; poll voting remains on X.
-- Explicit MP4 downloads with an attachment filename and full-file response, separate from playback byte ranges. Files keep the original encoding; this does not convert GIFs or re-encode video.
+- GIF downloads convert X’s MP4 animation into a real looping `.gif` file using FFmpeg (15 fps, up to 640 pixels wide), with an `image/gif` content type and `.gif` filename. Inputs are limited to 20 MiB, outputs to 25 MiB, and conversion to 25 seconds.
+- Explicit MP4 downloads with an attachment filename and full-file response, separate from playback byte ranges. Ordinary videos keep their original encoding.
 - Byte-range streaming proxy for X-hosted MP4 videos, to improve buffering and seeking.
 - Copyable Fxt share URL.
 - Graceful handling of unavailable or private posts.
@@ -49,3 +50,5 @@ The video proxy only accepts HTTPS URLs hosted on `video.twimg.com` and forwards
 X and Twitter are trademarks of their respective owners. This project is not affiliated with X Corp.
 
 Run the regression checks with `node --test tests/*.test.mjs`. Profile and feed data use the FxTwitter v2 profile endpoints with 8-second request timeouts and 60-second caching. Protected account posts remain unavailable; failures and empty feeds are shown separately.
+
+GIF conversion runs in the Node.js function and uses `@ffmpeg-installer/ffmpeg`. The Next.js configuration includes its Linux x64 executable in the Vercel `/api/gif` function. Temporary conversion files are removed after the download or an error.

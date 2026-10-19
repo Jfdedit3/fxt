@@ -118,3 +118,12 @@ export function videoDownloadUrl(value, filename = "fxt-video.mp4") {
   return `/api/video?${query}`;
 }
 
+export function gifDownloadUrl(value, filename = "fxt-animation.gif") {
+  const safe = safeExternalUrl(value);
+  if (!safe) return null;
+  const url = new URL(safe);
+  if (url.protocol !== "https:" || url.hostname !== "video.twimg.com" || !/^\/tweet_video\/[a-zA-Z0-9_-]+\.mp4$/.test(url.pathname)) return null;
+  const name = /^[a-zA-Z0-9_-]{1,100}\.gif$/.test(filename) ? filename : "fxt-animation.gif";
+  return `/api/gif?${new URLSearchParams({ url: safe, filename: name })}`;
+}
+
