@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPost, validParams } from "../../../../post-data.mjs";
-import { previewVideo, videoPlaybackUrl } from "../../../../post-media.mjs";
+import { previewVideo, videoDownloadUrl, videoPlaybackUrl } from "../../../../post-media.mjs";
 
 export const metadata = { title: "Fxt video player", robots: { index: false, follow: false } };
 
@@ -16,6 +16,7 @@ export default async function PlayerPage({ params }) {
       <source src={videoPlaybackUrl(video.url)} type={video.type} />
       Your browser does not support video playback.
     </video>
+    {videoDownloadUrl(video.url) && <a href={videoDownloadUrl(video.url, `fxt-${username}-${id}.mp4`)} download style={{ position: "absolute", top: 8, left: 8, padding: "6px 10px", borderRadius: 8, background: "#000b", color: "white", fontSize: 12 }}>Download MP4 ↓</a>}
     <Link href={`/${username}/status/${id}`} target="_blank" rel="noreferrer" style={{ position: "absolute", top: 8, right: 8, padding: "6px 10px", borderRadius: 8, background: "#000b", color: "white", fontSize: 12 }}>Open post ↗</Link>
   </main>;
 }

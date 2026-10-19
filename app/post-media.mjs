@@ -108,3 +108,13 @@ export function videoPlaybackUrl(value) {
   return safeUrl;
 }
 
+export function videoDownloadUrl(value, filename = "fxt-video.mp4") {
+  const safeUrl = safeExternalUrl(value);
+  if (!safeUrl) return null;
+  const url = new URL(safeUrl);
+  if (url.protocol !== "https:" || url.hostname !== "video.twimg.com" || !/\.mp4$/i.test(url.pathname)) return null;
+  const name = /^[a-zA-Z0-9_-]{1,100}\.mp4$/.test(filename) ? filename : "fxt-video.mp4";
+  const query = new URLSearchParams({ url: url.href, download: "1", filename: name });
+  return `/api/video?${query}`;
+}
+

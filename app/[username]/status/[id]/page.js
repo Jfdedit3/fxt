@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import CopyLinkButton from "./CopyLinkButton";
 import AccountIdentity from "../../../AccountIdentity";
 import { getPost, validParams } from "../../../post-data.mjs";
-import { mediaOf, mediaUrl, isGif, isVideo, thumbnailUrl, previewImage, previewVideo, videoPlaybackUrl } from "../../../post-media.mjs";
+import { mediaOf, mediaUrl, isGif, isVideo, thumbnailUrl, previewImage, previewVideo, videoDownloadUrl, videoPlaybackUrl } from "../../../post-media.mjs";
 import PostDetails, { AuthorDetails, PostContext, PostStatistics } from "./PostDetails";
 import { metadataDescription, postText, safeExternalUrl } from "../../../post-info.mjs";
 
@@ -123,10 +123,13 @@ export default async function PostPage({ params }) {
           if (!source && !poster) return null;
           if (isVideo(item) && playbackSource) {
             return (
-              <video className="postMedia" key={index} controls playsInline autoPlay={isGif(item)} loop={isGif(item)} muted={isGif(item)} preload="metadata" poster={poster || undefined}>
-                <source src={playbackSource} type={item.content_type || "video/mp4"} />
-                Your browser does not support embedded video.
-              </video>
+              <div className="videoBlock" key={index}>
+                <video className="postMedia" controls playsInline autoPlay={isGif(item)} loop={isGif(item)} muted={isGif(item)} preload="metadata" poster={poster || undefined}>
+                  <source src={playbackSource} type={item.content_type || "video/mp4"} />
+                  Your browser does not support embedded video.
+                </video>
+                {videoDownloadUrl(source) && <a className="mediaDownload" href={videoDownloadUrl(source, `fxt-${username}-${id}-${index + 1}.mp4`)} download>Download MP4 ↓</a>}
+              </div>
             );
           }
           const image = source || poster;

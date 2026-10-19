@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { isGif, isVideo, mediaOf, previewImage, previewVideo, thumbnailUrl, videoPlaybackUrl } from "../app/post-media.mjs";
+import { isGif, isVideo, mediaOf, previewImage, previewVideo, thumbnailUrl, videoDownloadUrl, videoPlaybackUrl } from "../app/post-media.mjs";
 
 test("shared media keeps every photo and prefers the album mosaic for previews", () => {
   const photos = [1, 2, 3].map(id => ({ id: "reused", type: "photo", url: `https://pbs.twimg.com/media/${id}.jpg` }));
@@ -53,4 +53,16 @@ test("video previews expose the GIF stream, dimensions and correct MIME type", (
   const fallback = previewVideo({ media: { videos: [{ type: "video", url: item.url, width: -1, height: Infinity, format: "text/html" }] } });
   assert.equal(fallback.width, 640); assert.equal(fallback.height, 360); assert.equal(fallback.type, "video/mp4");
   assert.equal(previewVideo(null), null);
+});
+
+test("download links request a complete MP4 with a safe file extension", () => {
+  const source = "https://video.twimg.com/tweet_video/example.mp4";
+  const url = new URL(videoDownloadUrl(source, "fxt-post-1.mp4"), "https://fxt.example");
+  assert.equal(url.pathname, "/api/video");
+  assert.equal(url.searchParams.get("url"), source);
+  assert.equal(url.searchParams.get("download"), "1");
+  assert.equal(url.searchParams.get("filename"), "fxt-post-1.mp4");
+  assert.equal(new URL(videoDownloadUrl(source, "../bad.html"), "https://fxt.example").searchParams.get("filename"), "fxt-video.mp4");
+  assert.equal(videoDownloadUrl("https://example.com/video.mp4"), null);
+  assert.equal(videoDownloadUrl("https://video.twimg.com/image.gif"), null);
 });

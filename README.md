@@ -40,6 +40,7 @@ The video proxy only accepts HTTPS URLs hosted on `video.twimg.com` and forwards
 - Clickable author avatars and names open a public profile on Fxt (`/username`), with a banner, biography, join date, account counts, and paginated Posts, Posts & replies, and Media feeds.
 - Reply context, quoted posts, poll results, link cards, community notes, and post language when supplied by the API.
 - Engagement counts in Open Graph and Twitter Card descriptions. Counts may be cached for 60 seconds; poll voting remains on X.
+- Explicit MP4 downloads with an attachment filename and full-file response, separate from playback byte ranges. Files keep the original encoding; this does not convert GIFs or re-encode video.
 - Byte-range streaming proxy for X-hosted MP4 videos, to improve buffering and seeking.
 - Copyable Fxt share URL.
 - Graceful handling of unavailable or private posts.

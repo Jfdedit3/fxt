@@ -1,7 +1,7 @@
 import Link from "next/link";
 import AccountIdentity from "../AccountIdentity";
 import { localPostUrl, postText, profilePath, safeExternalUrl, textValue } from "../post-info.mjs";
-import { isGif, isVideo, mediaOf, mediaUrl, thumbnailUrl, videoPlaybackUrl } from "../post-media.mjs";
+import { isGif, isVideo, mediaOf, mediaUrl, thumbnailUrl, videoDownloadUrl, videoPlaybackUrl } from "../post-media.mjs";
 import { PostContext, PostStatistics } from "./status/[id]/PostDetails";
 
 export default function FeedPost({ post }) {
@@ -25,7 +25,10 @@ export default function FeedPost({ post }) {
     {attachments.slice(0, 4).map((item, index) => {
       const source = safeExternalUrl(mediaUrl(item));
       const poster = safeExternalUrl(thumbnailUrl(item));
-      if (isVideo(item) && source) return <video key={index} className="postMedia feedMedia" controls playsInline autoPlay={isGif(item)} loop={isGif(item)} muted={isGif(item)} preload="none" poster={poster || undefined} src={videoPlaybackUrl(source)} />;
+      if (isVideo(item) && source) return <div className="videoBlock" key={index}>
+        <video className="postMedia feedMedia" controls playsInline autoPlay={isGif(item)} loop={isGif(item)} muted={isGif(item)} preload="none" poster={poster || undefined} src={videoPlaybackUrl(source)} />
+        {videoDownloadUrl(source) && <a className="mediaDownload" href={videoDownloadUrl(source, `fxt-${post.id}-${index + 1}.mp4`)} download>Download MP4 ↓</a>}
+      </div>;
       const image = source || poster;
       return image ? <Link href={href} key={index} className="feedMediaLink"><img src={image} alt={textValue(item.altText) || `Media ${index + 1} from post`} className="postMedia feedMedia" loading="lazy" /></Link> : null;
     })}
