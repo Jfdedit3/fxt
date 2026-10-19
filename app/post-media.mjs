@@ -40,9 +40,20 @@ export function mediaUrl(item) {
   return item?.url || item?.media_url || item?.media_url_https || null;
 }
 
+export function isGif(item) {
+  const type = String(item?.type || item?.kind || "").toLowerCase();
+  return type === "gif" || type === "animated_gif";
+}
+
 export function isVideo(item) {
   const type = String(item?.type || item?.kind || "").toLowerCase();
-  return type.includes("video") || type.includes("animated_gif");
+  if (isGif(item)) {
+    // X's animated GIFs are normally MP4 videos. Preserve native GIF images
+    // when an upstream endpoint explicitly supplies a .gif file instead.
+    const url = safeExternalUrl(mediaUrl(item));
+    return !url || !/\.gif$/i.test(new URL(url).pathname);
+  }
+  return type.includes("video");
 }
 
 export function thumbnailUrl(item) {
