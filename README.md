@@ -13,9 +13,11 @@ If `NEXT_PUBLIC_SITE_URL` is omitted, the app uses Vercel's `VERCEL_URL` value w
 
 ## How to use
 
-Paste a public post URL on the homepage, or open a post directly on your Fxt domain:
+Paste a public post or profile URL on the homepage, or open either directly on your Fxt domain:
 
 ```text
+https://x.com/username
+https://your-project.vercel.app/username
 https://x.com/username/status/123456789
 https://your-project.vercel.app/username/status/123456789
 ```
