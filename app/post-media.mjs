@@ -81,6 +81,19 @@ export function previewImage(post) {
   return safeExternalUrl(firstImage(post));
 }
 
+export function previewVideo(post) {
+  const item = mediaOf(post).find(media => isVideo(media) && safeExternalUrl(mediaUrl(media)));
+  if (!item) return null;
+  const dimension = (value, fallback) => Number.isInteger(Number(value)) && Number(value) > 0 && Number(value) <= 16384 ? Number(value) : fallback;
+  const format = item.content_type || item.format;
+  return {
+    url: safeExternalUrl(mediaUrl(item)),
+    type: ["video/mp4", "video/webm", "video/ogg"].includes(format) ? format : "video/mp4",
+    width: dimension(item.width, 640), height: dimension(item.height, 360),
+    poster: safeExternalUrl(thumbnailUrl(item)), gif: isGif(item)
+  };
+}
+
 export function videoPlaybackUrl(value) {
   const safeUrl = safeExternalUrl(value);
   if (!safeUrl) return null;

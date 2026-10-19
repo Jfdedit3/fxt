@@ -2,17 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import CopyLinkButton from "./CopyLinkButton";
 import AccountIdentity from "../../../AccountIdentity";
-import { mediaOf, mediaUrl, isGif, isVideo, thumbnailUrl, previewImage, videoPlaybackUrl } from "../../../post-media.mjs";
+import { getPost, validParams } from "../../../post-data.mjs";
+import { mediaOf, mediaUrl, isGif, isVideo, thumbnailUrl, previewImage, previewVideo, videoPlaybackUrl } from "../../../post-media.mjs";
 import PostDetails, { AuthorDetails, PostContext, PostStatistics } from "./PostDetails";
 import { metadataDescription, postText, safeExternalUrl } from "../../../post-info.mjs";
-
-const API_BASE = "https://api.fxtwitter.com";
-const USERNAME_RE = /^[a-zA-Z0-9_]{1,50}$/;
-const STATUS_ID_RE = /^\d{1,30}$/;
-
-function validParams(username, id) {
-  return USERNAME_RE.test(username) && STATUS_ID_RE.test(id);
-}
 
 function siteOrigin() {
   const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim();
@@ -23,50 +16,6 @@ function siteOrigin() {
     } catch {}
   }
   return process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000";
-}
-
-async function getPost(username, id) {
-  if (!validParams(username, id)) return null;
-
-  // Prefer FxTwitter API v2: its status.media.all represents the complete
-  // attachment list. Fall back to the legacy endpoint if v2 is unavailable.
-  const endpoints = [
-    `${API_BASE}/2/status/${encodeURIComponent(id)}`,
-    `${API_BASE}/${encodeURIComponent(username)}/status/${encodeURIComponent(id)}`
-  ];
-
-  for (const endpoint of endpoints) {
-    try {
-      const response = await fetch(endpoint, {
-        headers: {
-          Accept: "application/json",
-          // FxTwitter API v2 rejects requests without an identifiable User-Agent.
-          "User-Agent": "FxtPreview/1.0 (+https://fxt-pi.vercel.app)"
-        },
-        signal: AbortSignal.timeout(8000),
-        next: { revalidate: 60 }
-      });
-      if (!response.ok) continue;
-
-      const data = await response.json();
-      const post =
-        data?.status ||
-        data?.tweet ||
-        data?.data?.status ||
-        data?.data?.tweet ||
-        data?.data ||
-        null;
-
-      if (post && typeof post === "object" && post.media && typeof post.media === "object") {
-        return post;
-      }
-      if (post && typeof post === "object") return post;
-    } catch {
-      // Try the next compatible endpoint.
-    }
-  }
-
-  return null;
 }
 
 function authorName(post) {
@@ -98,8 +47,8 @@ export async function generateMetadata({ params }) {
   const title = post ? `${authorName(post)} (@${authorHandle(post, username)}) on X` : "X post preview";
   const description = metadataDescription(post, username);
   const image = previewImage(post);
-  const video = mediaOf(post).find(isVideo);
-  const videoUrl = safeExternalUrl(mediaUrl(video));
+  const video = previewVideo(post);
+  const videoUrl = video?.url;
   const canonical = `${siteOrigin()}/${encodeURIComponent(username)}/status/${id}`;
 
   return {
@@ -113,10 +62,12 @@ export async function generateMetadata({ params }) {
       siteName: "Fxt",
       url: canonical,
       ...(image ? { images: [{ url: image, alt: title }] } : {}),
-      ...(videoUrl ? { videos: [{ url: videoUrl, type: video?.content_type || "video/mp4" }] } : {})
+      ...(videoUrl ? { videos: [{ url: videoUrl, secureUrl: videoUrl.startsWith("https:") ? videoUrl : undefined, type: video.type, width: video.width, height: video.height }] } : {})
     },
+    ...(videoUrl ? { other: { "twitter:player:stream:content_type": video.type } } : {}),
     twitter: {
-      card: image ? "summary_large_image" : "summary",
+      card: videoUrl ? "player" : image ? "summary_large_image" : "summary",
+      ...(videoUrl ? { players: [{ playerUrl: `${canonical}/player`, streamUrl: videoUrl, width: video.width, height: video.height }] } : {}),
       title,
       description,
       ...(image ? { images: [image] } : {})

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { isGif, isVideo, mediaOf, previewImage, thumbnailUrl, videoPlaybackUrl } from "../app/post-media.mjs";
+import { isGif, isVideo, mediaOf, previewImage, previewVideo, thumbnailUrl, videoPlaybackUrl } from "../app/post-media.mjs";
 
 test("shared media keeps every photo and prefers the album mosaic for previews", () => {
   const photos = [1, 2, 3].map(id => ({ id: "reused", type: "photo", url: `https://pbs.twimg.com/media/${id}.jpg` }));
@@ -41,4 +41,16 @@ test("legacy GIF types, native GIF images, ordinary videos and photos remain dis
   assert.equal(isVideo({ type: "video" }), true);
   assert.equal(isGif({ type: "video" }), false);
   assert.equal(isVideo({ type: "photo", url: "https://pbs.twimg.com/photo.jpg" }), false);
+});
+
+test("video previews expose the GIF stream, dimensions and correct MIME type", () => {
+  const item = { type: "gif", url: "https://video.twimg.com/tweet_video/HU8gdQda0AAx8Ct.mp4", width: 1164, height: 1010, format: "video/mp4", thumbnail_url: "https://pbs.twimg.com/tweet_video_thumb/HU8gdQda0AAx8Ct.jpg" };
+  assert.deepEqual(previewVideo({ media: { all: [item] } }), {
+    url: item.url, type: "video/mp4", width: 1164, height: 1010, poster: item.thumbnail_url, gif: true
+  });
+  assert.equal(previewVideo({ media: { photos: [{ type: "photo", url: "https://example.com/photo.jpg" }] } }), null);
+  assert.equal(previewVideo({ media: { videos: [{ type: "video", url: "javascript:alert(1)" }] } }), null);
+  const fallback = previewVideo({ media: { videos: [{ type: "video", url: item.url, width: -1, height: Infinity, format: "text/html" }] } });
+  assert.equal(fallback.width, 640); assert.equal(fallback.height, 360); assert.equal(fallback.type, "video/mp4");
+  assert.equal(previewVideo(null), null);
 });
