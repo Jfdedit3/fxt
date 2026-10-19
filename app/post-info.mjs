@@ -2,6 +2,10 @@ export function textValue(value) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+export function profilePath(handle) {
+  return typeof handle === "string" && /^[a-zA-Z0-9_]{1,50}$/.test(handle) ? `/${handle}` : null;
+}
+
 export function postText(post) {
   return textValue(post?.text) || textValue(post?.raw_text?.text) ||
     textValue(post?.raw_text) || textValue(post?.description);
@@ -13,6 +17,16 @@ export function safeExternalUrl(value) {
     const url = new URL(value);
     return ["https:", "http:"].includes(url.protocol) ? url.href : null;
   } catch { return null; }
+}
+
+export function profileAvatarUrl(value) {
+  const safe = safeExternalUrl(value);
+  if (!safe) return null;
+  const url = new URL(safe);
+  if (url.hostname === "pbs.twimg.com" && url.pathname.startsWith("/profile_images/")) {
+    url.pathname = url.pathname.replace(/_(?:normal|bigger|mini|200x200)(\.[a-zA-Z0-9]+)$/, "_400x400$1");
+  }
+  return url.href;
 }
 
 export function countValue(value) {

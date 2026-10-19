@@ -37,6 +37,7 @@ The video proxy only accepts HTTPS URLs hosted on `video.twimg.com` and forwards
 - Photo mosaics in share previews for multi-image posts.
 - Likes, reposts, replies, quotes, bookmarks, and views when provided (missing counts stay hidden).
 - Expandable author biography, follower counts, location, website, and verification indicator.
+- Clickable author avatars and names open a public profile on Fxt (`/username`), with a banner, biography, join date, account counts, and paginated Posts, Posts & replies, and Media feeds.
 - Reply context, quoted posts, poll results, link cards, community notes, and post language when supplied by the API.
 - Engagement counts in Open Graph and Twitter Card descriptions. Counts may be cached for 60 seconds; poll voting remains on X.
 - Byte-range streaming proxy for X-hosted MP4 videos, to improve buffering and seeking.
@@ -46,4 +47,4 @@ The video proxy only accepts HTTPS URLs hosted on `video.twimg.com` and forwards
 
 X and Twitter are trademarks of their respective owners. This project is not affiliated with X Corp.
 
-Run the post information regression checks with `node --test tests/post-info.test.mjs`.
+Run the regression checks with `node --test tests/*.test.mjs`. Profile and feed data use the FxTwitter v2 profile endpoints with 8-second request timeouts and 60-second caching. Protected account posts remain unavailable; failures and empty feeds are shown separately.

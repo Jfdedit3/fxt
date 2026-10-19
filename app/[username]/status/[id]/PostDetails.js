@@ -1,4 +1,5 @@
 import Link from "next/link";
+import AccountIdentity from "../../../AccountIdentity";
 import { formatCount, localPostUrl, pollChoices, postStats, postText, replyContext, safeExternalUrl, textValue } from "../../../post-info.mjs";
 
 export function PostContext({ post }) {
@@ -52,7 +53,7 @@ export default function PostDetails({ post }) {
     {quote && <section className="detailPanel quotedPost" aria-label="Quoted post">
       <h2>Quoted post</h2>
       {quote.type === "tombstone" ? <p>Quoted post unavailable.</p> : <>
-        <strong>{textValue(quote.author?.name) || textValue(quote.user?.name) || "X user"}</strong>
+        <AccountIdentity author={quote.author || quote.user || {}} />
         <p className="detailText">{postText(quote) || "This post contains media."}</p>
         {quoteImage && <img className="postMedia" src={quoteImage} alt="Media from quoted post" loading="lazy" />}
         {quotedUrl && <Link className="detailLink" href={quotedUrl}>View quoted post ↗</Link>}
