@@ -5,7 +5,7 @@ import { promisify } from "node:util";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import ffmpeg from "@ffmpeg-installer/ffmpeg";
+import ffmpeg from "ffmpeg-static";
 import { convertToGif, gifFilename, gifSourceUrl } from "../app/gif-conversion.mjs";
 import { gifDownloadUrl } from "../app/post-media.mjs";
 
@@ -25,11 +25,11 @@ test("MP4 conversion produces a real animated GIF, rather than a renamed MP4", a
   try {
     const input = join(directory, "test.mp4");
     const output = join(directory, "test.gif");
-    await promisify(execFile)(ffmpeg.path, ["-nostdin", "-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc=size=32x32:rate=10", "-t", "0.4", "-pix_fmt", "yuv420p", input]);
+    await promisify(execFile)(ffmpeg, ["-nostdin", "-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc=size=32x32:rate=10", "-t", "0.4", "-pix_fmt", "yuv420p", input]);
     const size = await convertToGif(input, output);
     const bytes = await readFile(output);
     assert.equal(bytes.subarray(0, 6).toString(), "GIF89a");
     assert.ok(size > 100);
-    await promisify(execFile)(ffmpeg.path, ["-nostdin", "-hide_banner", "-loglevel", "error", "-i", output, "-f", "null", "-"]);
+    await promisify(execFile)(ffmpeg, ["-nostdin", "-hide_banner", "-loglevel", "error", "-i", output, "-f", "null", "-"]);
   } finally { await rm(directory, { recursive: true, force: true }); }
 });

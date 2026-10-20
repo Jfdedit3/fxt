@@ -19,3 +19,10 @@ test("unrelated, malformed and non-profile X URLs remain invalid", () => {
     assert.equal(normalizeXUrl(url), null, String(url));
   }
 });
+
+test("anonymous status links and profile tabs are accepted", () => {
+  assert.equal(normalizeXUrl("https://x.com/i/status/2111273616495333805"), "/i/status/2111273616495333805");
+  assert.equal(normalizeXUrl("https://twitter.com/i/web/status/2111273616495333805"), "/i/status/2111273616495333805");
+  assert.equal(normalizeXUrl("https://x.com/HoldingNuts_3D/media"), "/HoldingNuts_3D?tab=media");
+  assert.equal(normalizeXUrl("https://x.com/HoldingNuts_3D/with_replies"), "/HoldingNuts_3D?tab=replies");
+});

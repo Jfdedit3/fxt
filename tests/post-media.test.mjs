@@ -66,3 +66,13 @@ test("download links request a complete MP4 with a safe file extension", () => {
   assert.equal(videoDownloadUrl("https://example.com/video.mp4"), null);
   assert.equal(videoDownloadUrl("https://video.twimg.com/image.gif"), null);
 });
+
+test("legacy animated GIFs select the MP4 variant rather than the JPEG poster", () => {
+  const item = { type: "animated_gif", media_url_https: "https://pbs.twimg.com/thumbnail.jpg", video_info: { variants: [
+    { content_type: "application/x-mpegURL", url: "https://video.twimg.com/playlist.m3u8" },
+    { content_type: "video/mp4", bitrate: 100, url: "https://video.twimg.com/tweet_video/a.mp4" }
+  ] } };
+  const post = { extended_entities: { media: [item] } };
+  assert.equal(previewVideo(post).url, "https://video.twimg.com/tweet_video/a.mp4");
+  assert.equal(previewImage(post), "https://pbs.twimg.com/thumbnail.jpg");
+});

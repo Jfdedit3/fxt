@@ -8,6 +8,10 @@ export function normalizeXUrl(value) {
   try { url = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`); } catch { return null; }
   const host = url.hostname.toLowerCase().replace(/^www\./, "");
   if (!["http:", "https:"].includes(url.protocol) || !HOSTS.has(host) || url.username || url.password || url.port) return null;
+  const anonymous = url.pathname.match(/^\/i\/(?:web\/)?status\/(\d{1,30})(?:\/(?:photo|video)\/[1-9]\d*)?\/?$/i);
+  if (anonymous) return `/i/status/${anonymous[1]}`;
+  const profileTab = url.pathname.match(/^\/@?([a-zA-Z0-9_]{1,50})\/(media|with_replies)\/?$/i);
+  if (profileTab && !RESERVED.has(profileTab[1].toLowerCase())) return `/${profileTab[1]}?tab=${profileTab[2].toLowerCase() === "media" ? "media" : "replies"}`;
   const match = url.pathname.match(/^\/@?([a-zA-Z0-9_]{1,50})(?:\/status\/(\d{1,30})(?:\/(?:photo|video)\/[1-9]\d*)?)?\/?$/i);
   if (!match || RESERVED.has(match[1].toLowerCase())) return null;
   return match[2] ? `/${match[1]}/status/${match[2]}` : `/${match[1]}`;

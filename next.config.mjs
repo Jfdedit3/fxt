@@ -1,8 +1,8 @@
 /** @type {import('next').NextConfig} */
 const config = {
-  serverExternalPackages: ["@ffmpeg-installer/ffmpeg", "@ffmpeg-installer/linux-x64"],
+  serverExternalPackages: ["ffmpeg-static"],
   outputFileTracingIncludes: {
-    "/api/gif": ["./node_modules/@ffmpeg-installer/linux-x64/ffmpeg"]
+    "/api/gif": ["./node_modules/ffmpeg-static/ffmpeg"]
   }
 };
 

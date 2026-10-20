@@ -6,7 +6,7 @@ function getSiteOrigin() {
     try {
       const url = new URL(configured);
       if (url.protocol === "https:" || url.protocol === "http:") return url.origin;
-    } catch {}
+    } catch { /* Fall back to the default URL. */ }
   }
   return process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000";
 }

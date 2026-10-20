@@ -22,13 +22,13 @@ https://x.com/username/status/123456789
 https://your-project.vercel.app/username/status/123456789
 ```
 
-The post page includes a working **Copy Fxt link** button. Post identifiers and usernames are validated before upstream requests; upstream requests time out after 8 seconds, and Next.js may cache responses for 60 seconds.
+The post page includes a working **Copy Fxt link** button. Post identifiers and usernames are validated before upstream requests; upstream API attempts time out after 4.5 seconds, and Next.js may cache responses for 60 seconds.
 
 ## Important upstream dependency
 
 This project currently retrieves post data from the public `api.fxtwitter.com` endpoint. It is a separate front end and metadata renderer, but **it is not an independent data provider**. Availability, rate limits, API response formats, and media access depend on that upstream service. A true independent provider would require a supported data source or separately maintained compatible backend.
 
-The video proxy only accepts HTTPS URLs hosted on `video.twimg.com` and forwards HTTP Range requests so browsers can buffer and seek within the stream. It does not download or permanently store video files. The app does not intentionally maintain a public feed or database of requested posts. It does not bypass private or restricted posts. Do not treat this initial implementation as production-hardened against abuse; add platform-level rate limiting and monitoring before operating it at scale.
+The video proxy only accepts HTTPS MP4/WebM URLs hosted on `video.twimg.com`, rejects redirects and nonstandard ports, and enforces upstream connection and idle-read timeouts. It forwards HTTP Range requests so browsers can buffer and seek within the stream. It does not download or permanently store video files. The app does not intentionally maintain a public feed or database of requested posts. It does not bypass private or restricted posts. Do not treat this initial implementation as production-hardened against abuse; add platform-level rate limiting and monitoring before operating it at scale.
 
 ## Features
 
@@ -51,6 +51,16 @@ The video proxy only accepts HTTPS URLs hosted on `video.twimg.com` and forwards
 
 X and Twitter are trademarks of their respective owners. This project is not affiliated with X Corp.
 
-Run the regression checks with `node --test tests/*.test.mjs`. Profile and feed data use the FxTwitter v2 profile endpoints with 8-second request timeouts and 60-second caching. Protected account posts remain unavailable; failures and empty feeds are shown separately.
+Run the regression checks with `node --test tests/*.test.mjs`. Profile and feed data use the FxTwitter v2 profile endpoints with 4.5-second timeouts per attempt and 60-second caching. Protected account posts remain unavailable; failures and empty feeds are shown separately.
 
-GIF conversion runs in the Node.js function and uses `@ffmpeg-installer/ffmpeg`. The Next.js configuration includes its Linux x64 executable in the Vercel `/api/gif` function. Temporary conversion files are removed after the download or an error.
+GIF conversion runs in the Node.js function and uses `ffmpeg-static`. The Next.js configuration includes its static executable in the Vercel `/api/gif` function. Temporary source files are removed after conversion or an error. Converted GIFs are cached by canonical source URL for one hour with a 128 MiB per-instance disk budget. Concurrent requests for the same GIF share one conversion.
+
+## Reliability and resource limits
+
+Profile lookups try the v2 profile endpoint, the stable numeric ID when provided by an author link, the legacy profile endpoint, then the account author in its public timeline. A single upstream 404 does not produce a missing-profile page. Timeline requests can fall back to the numeric user ID. API responses are validated before rendering; transient failures are retried once. Confirmed missing profiles/posts return 404; temporary failures redirect to a friendly non-indexable 503 page with a retry link.
+
+Media limits apply **per running function instance**: 6 GIF requests/minute/client, 120 video requests/minute/client, 2 simultaneous GIF conversions and 16 upstream video streams. They are bounded in-memory protections, not a distributed account-wide quota. A shared rate-limit store or hosting firewall is needed for a strict budget across multiple instances. Conversions have a 25-second deadline; connections and video reads have timeouts; client cancellation stops video streaming.
+
+## Checks
+
+Use Node.js 24 and `npm ci`, then run `npm run lint`, `npm test`, and `npm run build`. Browser tests run with `npx playwright install chromium` followed by `npm run test:e2e`. They start the production server with deterministic upstream fixtures, including HoldingNuts_3D's intermittent profile 404 case, pagination, anonymous status URLs, legacy GIFs and real HTTP error statuses. They do not depend on public X data or network availability. GitHub Actions runs these checks and the production dependency audit on pushes and pull requests.

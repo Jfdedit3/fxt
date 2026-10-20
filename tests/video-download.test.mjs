@@ -1,9 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { GET } from "../app/api/video/route.js";
 
-const code = await readFile(new URL("../app/api/video/route.js", import.meta.url), "utf8");
-const { GET } = await import(`data:text/javascript;base64,${Buffer.from(code).toString("base64")}`);
 const target = "https://video.twimg.com/tweet_video/example.mp4";
 const request = (query, headers = {}) => new Request(`https://fxt.example/api/video?url=${encodeURIComponent(target)}${query}`, { headers });
 

@@ -1,52 +1,34 @@
-const API_BASE = "https://api.fxtwitter.com";
-const USERNAME_RE = /^[a-zA-Z0-9_]{1,50}$/;
-const STATUS_ID_RE = /^\d{1,30}$/;
+import { fetchApi } from "./upstream.mjs";
+import { normalizePost } from "./post-schema.mjs";
 
 export function validParams(username, id) {
-  return USERNAME_RE.test(username) && STATUS_ID_RE.test(id);
+  return /^[a-zA-Z0-9_]{1,50}$/.test(username) && /^\d{1,30}$/.test(id);
 }
 
-export async function getPost(username, id) {
-  if (!validParams(username, id)) return null;
-
-  // Prefer FxTwitter API v2: its status.media.all represents the complete
-  // attachment list. Fall back to the legacy endpoint if v2 is unavailable.
+export async function getPostResult(username, id, fetcher = fetch) {
+  if (!validParams(username, id)) return { state: "not-found", post: null };
   const endpoints = [
-    `${API_BASE}/2/status/${encodeURIComponent(id)}`,
-    `${API_BASE}/${encodeURIComponent(username)}/status/${encodeURIComponent(id)}`
+    `https://api.fxtwitter.com/2/status/${encodeURIComponent(id)}`,
+    `https://api.fxtwitter.com/${encodeURIComponent(username)}/status/${encodeURIComponent(id)}`
   ];
-
+  const states = [];
   for (const endpoint of endpoints) {
-    try {
-      const response = await fetch(endpoint, {
-        headers: {
-          Accept: "application/json",
-          // FxTwitter API v2 rejects requests without an identifiable User-Agent.
-          "User-Agent": "FxtPreview/1.0 (+https://fxt-pi.vercel.app)"
-        },
-        signal: AbortSignal.timeout(8000),
-        next: { revalidate: 60 }
-      });
-      if (!response.ok) continue;
-
-      const data = await response.json();
-      const post =
-        data?.status ||
-        data?.tweet ||
-        data?.data?.status ||
-        data?.data?.tweet ||
-        data?.data ||
-        null;
-
-      if (post && typeof post === "object" && post.media && typeof post.media === "object") {
-        return post;
-      }
-      if (post && typeof post === "object") return post;
-    } catch {
-      // Try the next compatible endpoint.
+    const result = await fetchApi(endpoint, fetcher);
+    states.push(result.state);
+    if (result.state === "invalid") {
+      if (endpoint === endpoints[0]) return { state: "not-found", post: null };
+      states[states.length - 1] = "not-found";
+      continue;
     }
+    if (result.state !== "ready") continue;
+    const data = result.data;
+    const post = [data.status, data.tweet, data.data?.status, data.data?.tweet, data.data].map(candidate => normalizePost(candidate, id)).find(Boolean);
+    if (post) return { state: "ready", post };
+    states[states.length - 1] = "unavailable";
   }
-
-  return null;
+  return { state: states.every(state => state === "not-found") ? "not-found" : "unavailable", post: null };
 }
 
+export async function getPost(username, id, fetcher = fetch) {
+  return (await getPostResult(username, id, fetcher)).post;
+}

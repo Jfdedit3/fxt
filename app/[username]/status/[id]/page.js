@@ -1,11 +1,15 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { cache } from "react";
+import { notFound, redirect } from "next/navigation";
 import CopyLinkButton from "./CopyLinkButton";
 import AccountIdentity from "../../../AccountIdentity";
-import { getPost, validParams } from "../../../post-data.mjs";
-import { mediaOf, mediaUrl, isGif, isVideo, thumbnailUrl, previewImage, previewVideo, gifDownloadUrl, videoDownloadUrl, videoPlaybackUrl } from "../../../post-media.mjs";
+import { getPostResult, validParams } from "../../../post-data.mjs";
+import { mediaOf, mediaUrl, mediaMimeType, isGif, isVideo, thumbnailUrl, previewImage, previewVideo, gifDownloadUrl, videoDownloadUrl, videoPlaybackUrl } from "../../../post-media.mjs";
 import PostDetails, { AuthorDetails, PostContext, PostStatistics } from "./PostDetails";
 import { metadataDescription, postText, safeExternalUrl } from "../../../post-info.mjs";
+
+export const maxDuration = 60;
+const loadPost = cache(getPostResult);
 
 function siteOrigin() {
   const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim();
@@ -13,7 +17,7 @@ function siteOrigin() {
     try {
       const url = new URL(configured);
       if (url.protocol === "https:" || url.protocol === "http:") return url.origin;
-    } catch {}
+    } catch { /* Fall back to the default URL. */ }
   }
   return process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000";
 }
@@ -43,13 +47,15 @@ export async function generateMetadata({ params }) {
     return { title: "Invalid post URL | Fxt", robots: { index: false, follow: false } };
   }
 
-  const post = await getPost(username, id);
+  const result = await loadPost(username, id);
+  const post = result.post;
+  if (!post) return { title: "Post unavailable | Fxt", robots: { index: false, follow: false }, openGraph: null, twitter: null };
   const title = post ? `${authorName(post)} (@${authorHandle(post, username)}) on X` : "X post preview";
   const description = metadataDescription(post, username);
   const image = previewImage(post);
   const video = previewVideo(post);
   const videoUrl = video?.url;
-  const canonical = `${siteOrigin()}/${encodeURIComponent(username)}/status/${id}`;
+  const canonical = `${siteOrigin()}/${encodeURIComponent(authorHandle(post, username))}/status/${id}`;
 
   return {
     title,
@@ -79,24 +85,13 @@ export default async function PostPage({ params }) {
   const { username, id } = await params;
   if (!validParams(username, id)) notFound();
 
-  const post = await getPost(username, id);
-  const originalUrl = `https://x.com/${encodeURIComponent(username)}/status/${id}`;
-  const currentUrl = `${siteOrigin()}/${encodeURIComponent(username)}/status/${id}`;
-
-  if (!post) {
-    return (
-      <main className="postShell">
-        <Link href="/" className="back">← Fxt</Link>
-        <section className="postCard">
-          <div className="postBadge">POST UNAVAILABLE</div>
-          <h1>We couldn’t load this post.</h1>
-          <p>The post may be private, deleted, restricted, or temporarily unavailable from the upstream source.</p>
-          <a className="primaryLink" href={originalUrl} target="_blank" rel="noreferrer">Open on X ↗</a>
-          <p className="smallNote">Try again later if the post should be public.</p>
-        </section>
-      </main>
-    );
-  }
+  const result = await loadPost(username, id);
+  const post = result.post;
+  if (result.state === "not-found") notFound();
+  if (!post) redirect(`/unavailable?return=${encodeURIComponent(`/${username}/status/${id}`)}`);
+  const handle = authorHandle(post, username);
+  const originalUrl = `https://x.com/${handle}/status/${id}`;
+  const currentUrl = `${siteOrigin()}/${handle}/status/${id}`;
 
   const author = post.author || post.user || {};
   const date = displayDate(post.created_at || post.date);
@@ -121,11 +116,12 @@ export default async function PostPage({ params }) {
           const playbackSource = isVideo(item) && source ? videoPlaybackUrl(source) : source;
           const poster = safeExternalUrl(thumbnailUrl(item));
           if (!source && !poster) return null;
+          if (isVideo(item) && source && !mediaMimeType(item)) return <a className="detailLink" key={index} href={source} target="_blank" rel="noreferrer">Open external video ↗</a>;
           if (isVideo(item) && playbackSource) {
             return (
               <div className="videoBlock" key={index}>
                 <video className="postMedia" controls playsInline autoPlay={isGif(item)} loop={isGif(item)} muted={isGif(item)} controlsList={isGif(item) ? "nodownload" : undefined} preload="metadata" poster={poster || undefined}>
-                  <source src={playbackSource} type={item.content_type || "video/mp4"} />
+                  <source src={playbackSource} type={mediaMimeType(item)} />
                   Your browser does not support embedded video.
                 </video>
                 {isGif(item) ? gifDownloadUrl(source) && <a className="mediaDownload" href={gifDownloadUrl(source, `fxt-${username}-${id}-${index + 1}.gif`)} download>Download GIF ↓</a> : videoDownloadUrl(source) && <a className="mediaDownload" href={videoDownloadUrl(source, `fxt-${username}-${id}-${index + 1}.mp4`)} download>Download MP4 ↓</a>}

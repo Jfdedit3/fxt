@@ -1,64 +1,50 @@
+import { limitedResponse, requestKey, resourceGuard } from "../../resource-limits.mjs";
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const ALLOWED_HOSTS = new Set(["video.twimg.com"]);
+export const maxDuration = 60;
 
 function allowedVideoUrl(value) {
   try {
     const url = new URL(value);
-    if (url.protocol !== "https:" || !ALLOWED_HOSTS.has(url.hostname.toLowerCase())) return null;
+    if (url.protocol !== "https:" || url.hostname !== "video.twimg.com" || url.port || url.username || url.password || !/\.(mp4|webm)$/i.test(url.pathname)) return null;
     return url;
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
-export async function GET(request) {
+async function respond(request, head = false) {
   const incoming = new URL(request.url);
-  const rawUrl = incoming.searchParams.get("url");
-  const target = rawUrl ? allowedVideoUrl(rawUrl) : null;
+  const target = allowedVideoUrl(incoming.searchParams.get("url"));
   const download = incoming.searchParams.get("download") === "1";
-
-  if (!target || (download && !/\.mp4$/i.test(target.pathname))) {
-    return Response.json({ error: "Unsupported video URL." }, { status: 400 });
-  }
-
-  const headers = new Headers({
-    Accept: request.headers.get("accept") || "*/*",
-    "User-Agent": "Mozilla/5.0 FxtVideoProxy/1.0"
-  });
+  if (!target || (download && !/\.mp4$/i.test(target.pathname))) return Response.json({ error: "Unsupported video URL." }, { status: 400 });
+  const rate = resourceGuard.rate("video", requestKey(request), 120);
+  if (!rate.allowed) return limitedResponse(rate.retryAfter);
+  const release = resourceGuard.slot("video", 16);
+  if (!release) return limitedResponse();
+  const abort = new AbortController();
+  const signal = AbortSignal.any([request.signal, abort.signal]);
+  const timer = setTimeout(() => abort.abort(), 8000);
+  const headers = new Headers({ Accept: "video/*", "User-Agent": "FxtVideoProxy/2.0" });
   const range = request.headers.get("range");
-  // A download must fetch the complete file, rather than the player's current
-  // buffered byte range. Streaming requests keep range support for seeking.
-  if (range && !download) headers.set("Range", range);
-
+  if (range && !download && !head) headers.set("Range", range);
   let upstream;
   try {
-    upstream = await fetch(target.href, {
-      method: "GET",
-      headers,
-      redirect: "follow",
-      cache: "no-store"
-    });
+    upstream = await fetch(target.href, { method: head ? "HEAD" : "GET", headers, redirect: "error", cache: "no-store", signal });
   } catch {
-    return new Response("Video source unavailable.", { status: 502 });
+    clearTimeout(timer); release();
+    return new Response("Video source unavailable.", { status: signal.aborted ? 504 : 502 });
   }
-
-  if (![200, 206, 416].includes(upstream.status)) {
-    return new Response("Video source rejected the request.", { status: upstream.status === 404 ? 404 : 502 });
+  clearTimeout(timer);
+  const type = upstream.headers.get("content-type")?.split(";")[0].trim().toLowerCase();
+  if (![200, 206, 416].includes(upstream.status) || (download && (upstream.status !== 200 || type !== "video/mp4")) || (upstream.status !== 416 && !["video/mp4", "video/webm"].includes(type))) {
+    await upstream.body?.cancel(); release();
+    return new Response("The video source is unavailable or incomplete.", { status: upstream.status === 404 ? 404 : 502 });
   }
-
-  if (download && (upstream.status !== 200 || upstream.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !== "video/mp4")) {
-    await upstream.body?.cancel();
-    return new Response("The complete MP4 file is unavailable. Please try again.", { status: 502 });
-  }
-
   const responseHeaders = new Headers();
   for (const name of ["content-type", "content-length", "content-range", "accept-ranges", "last-modified", "etag"]) {
     const value = upstream.headers.get(name);
     if (value) responseHeaders.set(name, value);
   }
-  responseHeaders.set("Accept-Ranges", "bytes");
   responseHeaders.set("Cache-Control", "private, no-store");
   responseHeaders.set("X-Content-Type-Options", "nosniff");
   if (download) {
@@ -67,9 +53,21 @@ export async function GET(request) {
     responseHeaders.set("Content-Disposition", `attachment; filename="${filename}"`);
     responseHeaders.set("Accept-Ranges", "none");
   }
-
-  return new Response(upstream.body, {
-    status: upstream.status,
-    headers: responseHeaders
+  if (head || !upstream.body) { release(); return new Response(null, { status: upstream.status, headers: responseHeaders }); }
+  const reader = upstream.body.getReader();
+  const body = new ReadableStream({
+    async pull(controller) {
+      const idle = setTimeout(() => abort.abort(), 30000);
+      try {
+        const { done, value } = await reader.read();
+        if (done) { release(); controller.close(); } else controller.enqueue(value);
+      } catch (error) { release(); controller.error(error); }
+      finally { clearTimeout(idle); }
+    },
+    cancel(reason) { abort.abort(); release(); return reader.cancel(reason); }
   });
+  return new Response(body, { status: upstream.status, headers: responseHeaders });
 }
+
+export function GET(request) { return respond(request); }
+export function HEAD(request) { return respond(request, true); }

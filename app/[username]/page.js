@@ -1,16 +1,19 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
 import { countValue, formatCount, profileAvatarUrl, profilePath, safeExternalUrl, textValue } from "../post-info.mjs";
 import { getProfile, getTimeline, profileOptions, profilePageUrl } from "../profile-data.mjs";
 import FeedPost from "./FeedPost";
 
-const loadProfile = cache(getProfile);
+export const maxDuration = 60;
 
-export async function generateMetadata({ params }) {
+const loadProfile = cache((username, userId) => getProfile(username, undefined, userId));
+
+export async function generateMetadata({ params, searchParams }) {
   const { username } = await params;
   if (!profilePath(username)) return { title: "Invalid profile | Fxt", robots: { index: false, follow: false } };
-  const { user } = await loadProfile(username);
+  const options = profileOptions(await searchParams);
+  const { user } = await loadProfile(username, options.userId);
   if (!user) return { title: `@${username} | Fxt`, robots: { index: false, follow: false } };
   const title = `${textValue(user.name) || username} (@${user.screen_name}) | Fxt`;
   const description = (textValue(user.description) || `View @${user.screen_name}'s profile and public posts on Fxt.`).slice(0, 300);
@@ -26,14 +29,11 @@ export default async function ProfilePage({ params, searchParams }) {
   const { username } = await params;
   if (!profilePath(username)) notFound();
   const options = profileOptions(await searchParams);
-  const { state, user } = await loadProfile(username);
+  const { state, user } = await loadProfile(username, options.userId);
   if (state === "not-found") notFound();
-  if (!user) return <main className="postShell">
-    <nav className="postNav"><Link className="brand" href="/">← Fxt</Link></nav>
-    <section className="postCard"><h1>Profile unavailable</h1><p>We couldn’t load @{username} right now. Please try again later.</p><a className="primaryLink" href={`https://x.com/${username}`} target="_blank" rel="noreferrer">Open on X ↗</a></section>
-  </main>;
+  if (!user) redirect(`/unavailable?return=${encodeURIComponent(profilePageUrl(username, options))}`);
 
-  const timeline = user.protected ? { state: "protected", posts: [], nextCursor: null } : await getTimeline(user.screen_name, options);
+  const timeline = user.protected ? { state: "protected", posts: [], nextCursor: null } : await getTimeline(user.screen_name, { ...options, userId: user.id });
   const name = textValue(user.name) || user.screen_name;
   const banner = safeExternalUrl(user.banner_url);
   const avatar = profileAvatarUrl(user.avatar_url);
@@ -62,16 +62,16 @@ export default async function ProfilePage({ params, searchParams }) {
         </ul>
         <dl className="profileStats">{stats.map(([key, label]) => <div key={key}><dd>{formatCount(user[key])}</dd><dt>{label}</dt></div>)}</dl>
       </div>
-      <nav className="profileTabs" aria-label="Profile feeds">{tabs.map(([tab, label]) => <Link key={tab} href={profilePageUrl(user.screen_name, { tab })} prefetch={false} aria-current={options.tab === tab ? "page" : undefined}>{label}</Link>)}</nav>
+      <nav className="profileTabs" aria-label="Profile feeds">{tabs.map(([tab, label]) => <Link key={tab} href={profilePageUrl(user.screen_name, { tab, userId: options.userId })} prefetch={false} aria-current={options.tab === tab ? "page" : undefined}>{label}</Link>)}</nav>
     </section>
     <section className="profileTimeline" aria-label={tabs.find(([tab]) => tab === options.tab)[1]}>
       {timeline.posts.map(post => <FeedPost key={post.id} post={post} />)}
       {timeline.state === "protected" && <div className="profileEmpty"><h2>These posts are protected</h2><p>Only approved followers can view this account’s posts on X.</p></div>}
-      {timeline.state === "unavailable" && <div className="profileEmpty"><h2>Posts temporarily unavailable</h2><p>The profile loaded, but its posts couldn’t be retrieved. Try again later.</p><Link href={profilePageUrl(user.screen_name, { tab: options.tab })} prefetch={false}>Try again →</Link></div>}
+      {timeline.state === "unavailable" && <div className="profileEmpty"><h2>Posts temporarily unavailable</h2><p>The profile loaded, but its posts couldn’t be retrieved. Try again later.</p><Link href={profilePageUrl(user.screen_name, { tab: options.tab, userId: options.userId })} prefetch={false}>Try again →</Link></div>}
       {timeline.state === "empty" && <div className="profileEmpty"><h2>{options.cursor ? "No more posts to show" : "No posts to show"}</h2><p>No public posts were returned for this feed.</p></div>}
       <div className="profilePagination">
-        {options.cursor && <Link href={profilePageUrl(user.screen_name, { tab: options.tab })} prefetch={false}>↑ Latest posts</Link>}
-        {timeline.nextCursor && <Link href={profilePageUrl(user.screen_name, { tab: options.tab, cursor: timeline.nextCursor })} prefetch={false}>Load older posts ↓</Link>}
+        {options.cursor && <Link href={profilePageUrl(user.screen_name, { tab: options.tab, userId: options.userId })} prefetch={false}>↑ Latest posts</Link>}
+        {timeline.nextCursor && <Link href={profilePageUrl(user.screen_name, { tab: options.tab, userId: options.userId, cursor: timeline.nextCursor })} prefetch={false}>Load older posts ↓</Link>}
       </div>
     </section>
     <p className="privacyNote">Public profile data provided by FxTwitter. Information may be cached for up to 60 seconds.</p>

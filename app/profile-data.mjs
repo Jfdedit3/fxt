@@ -1,16 +1,20 @@
 import { localPostUrl, profilePath } from "./post-info.mjs";
 
+import { fetchApi } from "./upstream.mjs";
+import { normalizeAuthor, normalizePost } from "./post-schema.mjs";
+
 const API_BASE = "https://api.fxtwitter.com";
 export const PROFILE_TABS = ["posts", "replies", "media"];
 
 export function validCursor(cursor) {
-  return typeof cursor === "string" && cursor.length > 0 && cursor.length <= 2048 && /^[a-zA-Z0-9_+=/\-]+$/.test(cursor);
+  return typeof cursor === "string" && cursor.length > 0 && cursor.length <= 2048 && /^[a-zA-Z0-9_+=/-]+$/.test(cursor);
 }
 
 export function profileOptions(query = {}) {
   return {
     tab: PROFILE_TABS.includes(query.tab) ? query.tab : "posts",
-    cursor: validCursor(query.cursor) ? query.cursor : null
+    cursor: validCursor(query.cursor) ? query.cursor : null,
+    ...(/^\d{1,30}$/.test(String(query.user_id || query.userId || "")) ? { userId: String(query.user_id || query.userId) } : {})
   };
 }
 
@@ -27,47 +31,41 @@ export function timelineUrl(username, options = {}) {
 export function profilePageUrl(username, options = {}) {
   const path = profilePath(username);
   if (!path) return null;
-  const { tab, cursor } = profileOptions(options);
+  const { tab, cursor, userId } = profileOptions(options);
   const query = new URLSearchParams();
   if (tab !== "posts") query.set("tab", tab);
   if (cursor) query.set("cursor", cursor);
+  if (userId) query.set("user_id", userId);
   return query.size ? `${path}?${query}` : path;
 }
 
-async function apiRequest(url, fetcher) {
-  try {
-    const response = await fetcher(url, {
-      headers: { Accept: "application/json", "User-Agent": "FxtPreview/1.0 (+https://fxt-pi.vercel.app)" },
-      signal: AbortSignal.timeout(8000), next: { revalidate: 60 }
-    });
-    if (response.status === 204) return { state: "ready", data: { results: [] } };
-    if (response.status === 404) return { state: "not-found", data: null };
-    if (!response.ok) return { state: "unavailable", data: null };
-    const data = await response.json();
-    if (!data || typeof data !== "object" || (data.code !== undefined && data.code !== 200)) {
-      return { state: data?.code === 404 ? "not-found" : "unavailable", data: null };
-    }
-    return { state: "ready", data };
-  } catch { return { state: "unavailable", data: null }; }
-}
-
-export async function getProfile(username, fetcher = fetch) {
+export async function getProfile(username, fetcher = fetch, userId) {
   if (!profilePath(username)) return { state: "not-found", user: null };
-  const result = await apiRequest(`${API_BASE}/2/profile/${username}`, fetcher);
-  const user = result.data?.user;
-  if (result.state !== "ready") return { state: result.state, user: null };
-  if (!profilePath(user?.screen_name) || user.screen_name.toLowerCase() !== username.toLowerCase()) {
-    return { state: "unavailable", user: null };
+  const states = [];
+  const endpoints = [`${API_BASE}/2/profile/${username}`];
+  if (/^\d{1,30}$/.test(String(userId || ""))) endpoints.push(`${API_BASE}/2/profile/id:${userId}`);
+  endpoints.push(`${API_BASE}/${username}`);
+  for (const endpoint of endpoints) {
+    const result = await fetchApi(endpoint, fetcher);
+    states.push(result.state);
+    const user = normalizeAuthor(result.data?.user);
+    if (result.state === "ready" && user?.screen_name.toLowerCase() === username.toLowerCase()) return { state: "ready", user };
+    if (result.state === "ready") states[states.length - 1] = "unavailable";
   }
-  return { state: "ready", user };
+  // A profile 404 can be transient. Public posts also carry the full author.
+  const timeline = await fetchApi(timelineUrl(username), fetcher);
+  states.push(timeline.state);
+  const author = timelinePosts(timeline.data).map(post => post.author).find(user => user.screen_name.toLowerCase() === username.toLowerCase());
+  if (author) return { state: "ready", user: author };
+  return { state: states.every(state => state === "not-found") ? "not-found" : "unavailable", user: null };
 }
 
 export function timelinePosts(data) {
   if (!Array.isArray(data?.results)) return [];
   const seen = new Set();
   return data.results.flatMap(item => item?.type === "thread" && Array.isArray(item.statuses) ? item.statuses : [item])
-    .filter(post => {
-      if (post?.type === "tombstone" || !localPostUrl(post)) return false;
+    .map(post => normalizePost(post)).filter(post => {
+      if (!post || !localPostUrl(post)) return false;
       const key = String(post.id);
       if (seen.has(key)) return false;
       seen.add(key);
@@ -78,14 +76,19 @@ export function timelinePosts(data) {
 export async function getTimeline(username, options = {}, fetcher = fetch) {
   const url = timelineUrl(username, options);
   if (!url) return { state: "unavailable", posts: [], nextCursor: null };
-  const result = await apiRequest(url, fetcher);
+  let result = await fetchApi(url, fetcher);
+  if ((result.state !== "ready" || !Array.isArray(result.data?.results)) && /^\d{1,30}$/.test(String(options.userId || ""))) {
+    const fallback = new URL(url);
+    fallback.pathname = fallback.pathname.replace(`/profile/${username}/`, `/profile/id:${options.userId}/`);
+    result = await fetchApi(fallback.href, fetcher);
+  }
   // A 404 here can mean an empty timeline, rather than a missing account.
   if (result.state === "not-found") return { state: "empty", posts: [], nextCursor: null };
   if (result.state !== "ready" || !Array.isArray(result.data?.results)) return { state: "unavailable", posts: [], nextCursor: null };
   const posts = timelinePosts(result.data);
   const bottom = result.data?.cursor?.bottom;
   return {
-    state: posts.length ? "ready" : "empty", posts,
+    state: posts.length ? "ready" : result.data.results.length ? "unavailable" : "empty", posts,
     nextCursor: posts.length && validCursor(bottom) && bottom !== options.cursor ? bottom : null
   };
 }

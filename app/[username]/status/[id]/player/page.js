@@ -1,14 +1,19 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { getPost, validParams } from "../../../../post-data.mjs";
+import { notFound, redirect } from "next/navigation";
+import { getPostResult, validParams } from "../../../../post-data.mjs";
 import { previewVideo, gifDownloadUrl, videoDownloadUrl, videoPlaybackUrl } from "../../../../post-media.mjs";
+
+export const maxDuration = 60;
 
 export const metadata = { title: "Fxt video player", robots: { index: false, follow: false } };
 
 export default async function PlayerPage({ params }) {
   const { username, id } = await params;
   if (!validParams(username, id)) notFound();
-  const post = await getPost(username, id);
+  const result = await getPostResult(username, id);
+  if (result.state === "not-found") notFound();
+  if (!result.post) redirect(`/unavailable?return=${encodeURIComponent(`/${username}/status/${id}/player`)}`);
+  const post = result.post;
   const video = previewVideo(post);
   if (!video) notFound();
   const download = video.gif ? gifDownloadUrl(video.url, `fxt-${username}-${id}.gif`) : videoDownloadUrl(video.url, `fxt-${username}-${id}.mp4`);

@@ -26,7 +26,7 @@ export function mediaOf(post) {
   const seenUrls = new Set();
   return combined.filter(item => {
     if (!item || typeof item !== "object") return false;
-    const url = item.url || item.media_url_https || item.media_url || item.thumbnail_url || item.thumbnail || "";
+    const url = mediaUrl(item) || item.thumbnail_url || item.thumbnail || "";
     // Prefer the media URL as identity: some API variants reuse the same item ID
     // across attachments, which would otherwise incorrectly hide later images/videos.
     const key = String(url || item.id || "");
@@ -37,7 +37,29 @@ export function mediaOf(post) {
 }
 
 export function mediaUrl(item) {
-  return item?.url || item?.media_url || item?.media_url_https || null;
+  const direct = safeExternalUrl(item?.url || item?.media_url_https || item?.media_url);
+  const type = String(item?.type || item?.kind || "").toLowerCase();
+  if (!type.includes("video") && !["gif", "animated_gif"].includes(type)) return direct;
+  if (direct && /\.gif$/i.test(new URL(direct).pathname)) return direct;
+  const formats = [...(Array.isArray(item?.formats) ? item.formats : []), ...(Array.isArray(item?.video_info?.variants) ? item.video_info.variants : [])];
+  const playable = formats.filter(format => {
+    const url = safeExternalUrl(format?.url);
+    return url && !["hevc", "h265", "av1"].includes(format.codec) && (/\.(mp4|webm)$/i.test(new URL(url).pathname) || ["video/mp4", "video/webm"].includes(format.content_type) || ["mp4", "webm"].includes(format.container));
+  });
+  const score = format => ((format.content_type === "video/mp4" || format.container === "mp4" || /\.mp4(?:\?|$)/i.test(format.url)) ? 1e12 : 0) + (Number.isFinite(Number(format.bitrate)) ? Number(format.bitrate) : 0);
+  playable.sort((a, b) => score(b) - score(a));
+  return safeExternalUrl(playable[0]?.url) || direct;
+}
+
+export function mediaMimeType(item) {
+  const url = mediaUrl(item);
+  if (!url) return null;
+  const path = new URL(url).pathname;
+  if (/\.mp4$/i.test(path)) return "video/mp4";
+  if (/\.webm$/i.test(path)) return "video/webm";
+  if (/\.m3u8$/i.test(path)) return "application/x-mpegURL";
+  const format = item.content_type || item.format;
+  return ["video/mp4", "video/webm", "video/ogg"].includes(format) ? format : null;
 }
 
 export function isGif(item) {
@@ -57,7 +79,9 @@ export function isVideo(item) {
 }
 
 export function thumbnailUrl(item) {
-  return item?.thumbnail_url || item?.thumbnail || item?.preview_url || (isVideo(item) ? null : mediaUrl(item));
+  const legacy = safeExternalUrl(item?.media_url_https || item?.media_url);
+  const legacyPoster = legacy && /\.(jpg|jpeg|png|webp|gif)$/i.test(new URL(legacy).pathname) ? legacy : null;
+  return item?.thumbnail_url || item?.thumbnail || item?.preview_url || (isVideo(item) ? legacyPoster : mediaUrl(item));
 }
 
 function firstImage(post) {
@@ -82,13 +106,12 @@ export function previewImage(post) {
 }
 
 export function previewVideo(post) {
-  const item = mediaOf(post).find(media => isVideo(media) && safeExternalUrl(mediaUrl(media)));
+  const item = mediaOf(post).find(media => isVideo(media) && safeExternalUrl(mediaUrl(media)) && mediaMimeType(media));
   if (!item) return null;
   const dimension = (value, fallback) => Number.isInteger(Number(value)) && Number(value) > 0 && Number(value) <= 16384 ? Number(value) : fallback;
-  const format = item.content_type || item.format;
   return {
     url: safeExternalUrl(mediaUrl(item)),
-    type: ["video/mp4", "video/webm", "video/ogg"].includes(format) ? format : "video/mp4",
+    type: mediaMimeType(item),
     width: dimension(item.width, 640), height: dimension(item.height, 360),
     poster: safeExternalUrl(thumbnailUrl(item)), gif: isGif(item)
   };
@@ -101,10 +124,10 @@ export function videoPlaybackUrl(value) {
     const url = new URL(safeUrl);
     // X video URLs often need byte-range requests for seeking and reliable playback.
     // Proxy only the known video host; other providers remain direct links.
-    if (url.protocol === "https:" && url.hostname.toLowerCase() === "video.twimg.com") {
+    if (url.protocol === "https:" && url.hostname.toLowerCase() === "video.twimg.com" && /\.(mp4|webm)$/i.test(url.pathname)) {
       return `/api/video?url=${encodeURIComponent(url.href)}`;
     }
-  } catch {}
+  } catch { /* Fall back to the default URL. */ }
   return safeUrl;
 }
 
