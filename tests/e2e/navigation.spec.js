@@ -48,32 +48,38 @@ test("temporary upstream failures reach a friendly non-indexable 503 page", asyn
 
 for (const example of [
   { path: "/GodoffuryN/status/2120247287821529191", urls: [1, 2, 3, 4].map(number => `https://video.twimg.com/amplify_video/gallery-${number}.mp4`) },
-  { path: "/fever3D/status/1874137920996860413", urls: ["https://video.twimg.com/amplify_video/mixed.mp4", ...[1, 2, 3].map(number => `https://pbs.twimg.com/mixed-${number}.jpg?name=orig`)] }
+  { path: "/fever3D/status/1874143352154968122", urls: ["https://video.twimg.com/amplify_video/mixed.mp4", ...[1, 2, 3].map(number => `https://pbs.twimg.com/mixed-${number}.jpg?name=orig`)] }
 ]) test(`one normal post URL exposes all Discord media for ${example.path}`, async ({ request }) => {
   const response = await request.get(example.path, { headers: { "User-Agent": "Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)" } });
   expect(response.status()).toBe(200);
   const html = await response.text();
   const head = html.match(/<head[^>]*>([\s\S]*?)<\/head>/i)?.[1];
   expect(head).toBeTruthy();
-  const link = head.match(/<link\b[^>]*rel="discord:component-embed"[^>]*>/i)?.[0];
-  expect(link).toBeTruthy();
-  const href = link.match(/href="([^"]+)"/)?.[1];
-  expect(new URL(href).origin).toBe(new URL(response.url()).origin);
-  const payloadResponse = await request.get(href, { headers: { "User-Agent": "Discordbot/2.0" } });
-  expect(payloadResponse.status()).toBe(200);
-  const text = await payloadResponse.text();
+  const text = head.match(/<script id="discord:component-embed" type="application\/json">([\s\S]*?)<\/script>/)?.[1];
+  expect(text).toBeTruthy();
   expect(Buffer.byteLength(text)).toBeLessThanOrEqual(3000);
   const payload = JSON.parse(text);
   expect(payload.component.type).toBe(17);
   const gallery = payload.component.components.find(component => component.type === 12);
   expect(gallery.items.map(item => item.media.url)).toEqual(example.urls);
-  expect(head).toContain('property="og:video"');
-  expect(head).toContain('name="twitter:card" content="player"');
+  expect(head).not.toContain('property="og:video"');
+  expect(head).not.toContain('name="twitter:card" content="player"');
+  expect(response.headers()["cache-control"]).toContain("no-store");
+  // The very same URL continues to serve the interactive site to people.
+  const browser = await request.get(example.path, { headers: { "User-Agent": "Mozilla/5.0" } });
+  expect(await browser.text()).toContain('class="postCard"');
 });
 
 test("single-video previews keep their fallback and missing component data is not cached", async ({ request }) => {
   const response = await request.get("/HoldingNuts_3D/status/2108712786863755502", { headers: { "User-Agent": "Discordbot/2.0" } });
-  expect(await response.text()).not.toContain('rel="discord:component-embed"');
+  const html = await response.text();
+  expect(html).not.toContain('id="discord:component-embed"');
+  expect(html).toContain('property="og:video"');
+  expect(html).toContain('name="twitter:card" content="player"');
+  const missingPost = await request.get("/HoldingNuts_3D/status/1", { headers: { "User-Agent": "Discordbot/2.0" } });
+  expect(missingPost.status()).toBe(404);
+  const unavailablePost = await request.get("/TransientUser/status/999999999999", { headers: { "User-Agent": "Discordbot/2.0" } });
+  expect(unavailablePost.status()).toBe(503);
   const absent = await request.get("/HoldingNuts_3D/status/1/discord.json");
   expect(absent.status()).toBe(404);
   expect(absent.headers()["cache-control"]).toBe("no-store");

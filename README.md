@@ -67,8 +67,10 @@ Use Node.js 24 and `npm ci`, then run `npm run lint`, `npm test`, and `npm run b
 
 ## Multiple media in one Discord link preview
 
-A normal Fxt post URL with multiple supported media (including mixed video/photo posts and photo albums) now publishes a server-rendered `<link rel="discord:component-embed" type="application/json">` in its HTML head. The same-origin `/username/status/id/discord.json` endpoint supplies a Discord Container (type 17) containing a Media Gallery (type 12), with all supported attachments. **Only one post URL needs to be shared**; no separate per-video URLs or bot are required. Videos show playback controls rather than autoplaying.
+A normal Fxt post URL with multiple supported media (including mixed video/photo posts and photo albums) serves Discord's crawler a lightweight HTML response with an inline `<script id="discord:component-embed" type="application/json">` in its head. It contains a Container (type 17) and Media Gallery (type 12), without another JSON fetch. The public URL does not change, and browsers still receive the interactive post page. No query parameter, separate per-media links, or bot is required.
 
-The payload follows Discord's 3,000-byte limit and ten-item media limit. Media are prioritized over long text, and unsupported or oversized payloads fall back to the existing Open Graph/Twitter player preview. Posts with only one attachment keep their previous behavior. Existing links may need to be reposted with a fresh query parameter to avoid Discord's old preview cache.
+The crawler response does not advertise a competing standalone Open Graph/Twitter video player when a gallery is present. It keeps an image/card fallback for clients that cannot display component embeds. Single-attachment posts keep their video player preview. Responses are private and uncached by HTTP intermediaries to avoid mixing browser and crawler HTML. Discord controls its own message preview cache.
+
+Payloads are limited to 3,000 bytes after script escaping and ten media items. Existing linked JSON remains available. Automated tests cover the normal URL with Discord's exact crawler user agent, inline payload, browser response, missing posts, outages, and the one-video/three-photo case. They do not send a Discord message.
 
 Reference: https://discord.com/developers/link-previews/component-embeds . These previews depend on Discord client support and crawler/media availability; the automated checks validate the HTML head and linked payload, not a message sent to Discord.

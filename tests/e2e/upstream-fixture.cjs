@@ -5,7 +5,7 @@ const gif = { id: "2108712786863755502", author, text: "A legacy animation", ext
 
 const fourVideos = { id: "2120247287821529191", author: { ...author, screen_name: "GodoffuryN", name: "Gallery author" }, text: "Four video regression fixture", media: { all: Array.from({ length: 4 }, (_value, index) => ({ type: "video", url: `https://video.twimg.com/amplify_video/gallery-${index + 1}.mp4`, thumbnail_url: `https://pbs.twimg.com/gallery-${index + 1}.jpg`, width: 854, height: 480 })) } };
 
-const mixedMedia = { id: "1874137920996860413", author: { ...author, screen_name: "fever3D" }, text: "One video and three photos", media: { all: [{ type: "video", url: "https://video.twimg.com/amplify_video/mixed.mp4" }, ...[1, 2, 3].map(index => ({ type: "photo", url: `https://pbs.twimg.com/mixed-${index}.jpg?name=orig` }))] } };
+const mixedMedia = { id: "1874143352154968122", author: { ...author, screen_name: "fever3D" }, text: "One video and three photos", media: { all: [{ type: "video", url: "https://video.twimg.com/amplify_video/mixed.mp4" }, ...[1, 2, 3].map(index => ({ type: "photo", url: `https://pbs.twimg.com/mixed-${index}.jpg?name=orig` }))] } };
 
 globalThis.fetch = async function(input, options) {
   const href = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
