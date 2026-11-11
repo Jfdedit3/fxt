@@ -46,8 +46,11 @@ test("temporary upstream failures reach a friendly non-indexable 503 page", asyn
 });
 
 
-test("one normal post URL exposes a server-rendered Discord gallery with four videos", async ({ request }) => {
-  const response = await request.get("/GodoffuryN/status/2120247287821529191", { headers: { "User-Agent": "Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)" } });
+for (const example of [
+  { path: "/GodoffuryN/status/2120247287821529191", urls: [1, 2, 3, 4].map(number => `https://video.twimg.com/amplify_video/gallery-${number}.mp4`) },
+  { path: "/fever3D/status/1874137920996860413", urls: ["https://video.twimg.com/amplify_video/mixed.mp4", ...[1, 2, 3].map(number => `https://pbs.twimg.com/mixed-${number}.jpg?name=orig`)] }
+]) test(`one normal post URL exposes all Discord media for ${example.path}`, async ({ request }) => {
+  const response = await request.get(example.path, { headers: { "User-Agent": "Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)" } });
   expect(response.status()).toBe(200);
   const html = await response.text();
   const head = html.match(/<head[^>]*>([\s\S]*?)<\/head>/i)?.[1];
@@ -63,7 +66,7 @@ test("one normal post URL exposes a server-rendered Discord gallery with four vi
   const payload = JSON.parse(text);
   expect(payload.component.type).toBe(17);
   const gallery = payload.component.components.find(component => component.type === 12);
-  expect(gallery.items.map(item => item.media.url)).toEqual([1, 2, 3, 4].map(number => `https://video.twimg.com/amplify_video/gallery-${number}.mp4`));
+  expect(gallery.items.map(item => item.media.url)).toEqual(example.urls);
   expect(head).toContain('property="og:video"');
   expect(head).toContain('name="twitter:card" content="player"');
 });

@@ -65,10 +65,10 @@ Media limits apply **per running function instance**: 6 GIF requests/minute/clie
 
 Use Node.js 24 and `npm ci`, then run `npm run lint`, `npm test`, and `npm run build`. Browser tests run with `npx playwright install chromium` followed by `npm run test:e2e`. They start the production server with deterministic upstream fixtures, including HoldingNuts_3D's intermittent profile 404 case, pagination, anonymous status URLs, legacy GIFs and real HTTP error statuses. They do not depend on public X data or network availability. GitHub Actions runs these checks and the production dependency audit on pushes and pull requests.
 
-## Multiple videos in one Discord link preview
+## Multiple media in one Discord link preview
 
-A normal Fxt post URL with multiple videos now publishes a server-rendered `<link rel="discord:component-embed" type="application/json">` in its HTML head. The same-origin `/username/status/id/discord.json` endpoint supplies a Discord Container (type 17) containing a Media Gallery (type 12), with all supported attachments. **Only one post URL needs to be shared**; no separate per-video URLs or bot are required. Videos show playback controls rather than autoplaying.
+A normal Fxt post URL with multiple supported media (including mixed video/photo posts and photo albums) now publishes a server-rendered `<link rel="discord:component-embed" type="application/json">` in its HTML head. The same-origin `/username/status/id/discord.json` endpoint supplies a Discord Container (type 17) containing a Media Gallery (type 12), with all supported attachments. **Only one post URL needs to be shared**; no separate per-video URLs or bot are required. Videos show playback controls rather than autoplaying.
 
-The payload follows Discord's 3,000-byte limit and ten-item media limit. Media are prioritized over long text, and unsupported or oversized payloads fall back to the existing Open Graph/Twitter player preview. Single-video previews keep their previous behavior. Existing links may need to be reposted with a fresh query parameter to avoid Discord's old preview cache.
+The payload follows Discord's 3,000-byte limit and ten-item media limit. Media are prioritized over long text, and unsupported or oversized payloads fall back to the existing Open Graph/Twitter player preview. Posts with only one attachment keep their previous behavior. Existing links may need to be reposted with a fresh query parameter to avoid Discord's old preview cache.
 
 Reference: https://discord.com/developers/link-previews/component-embeds . These previews depend on Discord client support and crawler/media availability; the automated checks validate the HTML head and linked payload, not a message sent to Discord.

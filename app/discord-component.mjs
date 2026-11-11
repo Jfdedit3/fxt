@@ -1,4 +1,4 @@
-import { isVideo, mediaOf, mediaUrl } from "./post-media.mjs";
+import { mediaOf, mediaUrl } from "./post-media.mjs";
 import { postText, profilePath, safeExternalUrl, textValue } from "./post-info.mjs";
 
 export const DISCORD_COMPONENT_MAX_BYTES = 3000;
@@ -12,15 +12,19 @@ export function componentBytes(payload) {
   return Buffer.byteLength(JSON.stringify(payload), "utf8");
 }
 
-export function buildDiscordComponent(post, origin) {
-  const handle = textValue(post?.author?.screen_name);
-  if (!profilePath(handle) || !/^\d{1,30}$/.test(String(post?.id ?? ""))) return null;
-  const items = mediaOf(post).flatMap(item => {
+function galleryItems(post) {
+  return mediaOf(post).flatMap(item => {
     const url = safeExternalUrl(mediaUrl(item));
     if (!url || url.length > 2048 || !/\.(mp4|webm|mov|png|gif|jpg|jpeg|webp|avif)$/i.test(new URL(url).pathname)) return [];
     const description = textValue(item.altText);
     return [{ media: { url }, ...(description ? { description: Array.from(description).slice(0, 100).join("") } : {}) }];
   }).slice(0, 10);
+}
+
+export function buildDiscordComponent(post, origin) {
+  const handle = textValue(post?.author?.screen_name);
+  if (!profilePath(handle) || !/^\d{1,30}$/.test(String(post?.id ?? ""))) return null;
+  const items = galleryItems(post);
   if (!items.length) return null;
   const header = { type: 10, content: `**${plain(post.author.name || handle, 60)}** (@\u200b${plain(handle, 50)})` };
   const text = Array.from(postText(post));
@@ -42,8 +46,8 @@ export function buildDiscordComponent(post, origin) {
   return componentBytes(payload) <= DISCORD_COMPONENT_MAX_BYTES ? payload : null;
 }
 
-export function hasMultipleVideos(post) {
-  return mediaOf(post).filter(isVideo).length > 1;
+export function hasMultipleMedia(post) {
+  return galleryItems(post).length > 1;
 }
 
 export function componentOrigin(requestHeaders, fallback) {

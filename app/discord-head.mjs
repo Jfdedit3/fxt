@@ -1,8 +1,8 @@
 import { headers } from "next/headers";
-import { buildDiscordComponent, componentOrigin, hasMultipleVideos } from "./discord-component.mjs";
+import { buildDiscordComponent, componentOrigin, hasMultipleMedia } from "./discord-component.mjs";
 
 export async function discordMetadata(post, fallbackOrigin) {
-  if (!hasMultipleVideos(post)) return {};
+  if (!hasMultipleMedia(post)) return {};
   const origin = componentOrigin(await headers(), fallbackOrigin);
   if (!buildDiscordComponent(post, origin)) return {};
   // Next's "other" link descriptors support arbitrary rel values and are

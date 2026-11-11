@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildDiscordComponent, componentBytes, componentOrigin, DISCORD_COMPONENT_MAX_BYTES, hasMultipleVideos } from "../app/discord-component.mjs";
+import { buildDiscordComponent, componentBytes, componentOrigin, DISCORD_COMPONENT_MAX_BYTES, hasMultipleMedia } from "../app/discord-component.mjs";
 
 const videos = Array.from({ length: 4 }, (_value, index) => ({ type: "video", url: `https://video.twimg.com/amplify_video/video-${index + 1}.mp4?tag=14` }));
 const post = { id: "2120247287821529191", author: { screen_name: "GodoffuryN", name: "Author" }, text: "Four videos", media: { all: videos, videos } };
@@ -11,7 +11,7 @@ test("one Discord component embed contains all four distinct videos", () => {
   assert.equal(payload.component.type, 17);
   assert.deepEqual(Object.keys(payload), ["component"]);
   assert.deepEqual(gallery(payload).items.map(item => item.media.url), videos.map(video => video.url));
-  assert.equal(hasMultipleVideos(post), true);
+  assert.equal(hasMultipleMedia(post), true);
   assert.ok(componentBytes(payload) <= 3000);
 });
 
@@ -45,4 +45,14 @@ test("linked JSON uses the actual page host including preview and test domains",
   assert.equal(componentOrigin(new Headers({ "x-forwarded-host": "preview.vercel.app", "x-forwarded-proto": "https" }), "https://fxt.example"), "https://preview.vercel.app");
   assert.equal(componentOrigin(new Headers({ host: "invalid/path" }), "https://fxt.example"), "https://fxt.example");
   assert.equal(componentOrigin(new Headers({ host: "example.com:99999" }), "https://fxt.example"), "https://fxt.example");
+});
+
+
+test("gallery activates for one video plus three photos and for photo albums", () => {
+  const photos = [1, 2, 3].map(index => ({ type: "photo", url: `https://pbs.twimg.com/mixed-${index}.jpg?name=orig` }));
+  const mixed = { ...post, media: { all: [videos[0], ...photos], videos: [videos[0]], photos } };
+  assert.equal(hasMultipleMedia(mixed), true);
+  assert.deepEqual(gallery(buildDiscordComponent(mixed, "https://fxt.example")).items.map(item => item.media.url), [videos[0], ...photos].map(item => item.url));
+  assert.equal(hasMultipleMedia({ ...post, media: { photos } }), true);
+  assert.equal(hasMultipleMedia({ ...post, media: { all: [videos[0]] } }), false);
 });
