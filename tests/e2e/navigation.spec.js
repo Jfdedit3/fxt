@@ -44,3 +44,36 @@ test("temporary upstream failures reach a friendly non-indexable 503 page", asyn
   const post = await page.goto("/HoldingNuts_3D/status/999999999999");
   expect(post.status()).toBe(503);
 });
+
+
+test("one normal post URL exposes a server-rendered Discord gallery with four videos", async ({ request }) => {
+  const response = await request.get("/GodoffuryN/status/2120247287821529191", { headers: { "User-Agent": "Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)" } });
+  expect(response.status()).toBe(200);
+  const html = await response.text();
+  const head = html.match(/<head[^>]*>([\s\S]*?)<\/head>/i)?.[1];
+  expect(head).toBeTruthy();
+  const link = head.match(/<link\b[^>]*rel="discord:component-embed"[^>]*>/i)?.[0];
+  expect(link).toBeTruthy();
+  const href = link.match(/href="([^"]+)"/)?.[1];
+  expect(new URL(href).origin).toBe(new URL(response.url()).origin);
+  const payloadResponse = await request.get(href, { headers: { "User-Agent": "Discordbot/2.0" } });
+  expect(payloadResponse.status()).toBe(200);
+  const text = await payloadResponse.text();
+  expect(Buffer.byteLength(text)).toBeLessThanOrEqual(3000);
+  const payload = JSON.parse(text);
+  expect(payload.component.type).toBe(17);
+  const gallery = payload.component.components.find(component => component.type === 12);
+  expect(gallery.items.map(item => item.media.url)).toEqual([1, 2, 3, 4].map(number => `https://video.twimg.com/amplify_video/gallery-${number}.mp4`));
+  expect(head).toContain('property="og:video"');
+  expect(head).toContain('name="twitter:card" content="player"');
+});
+
+test("single-video previews keep their fallback and missing component data is not cached", async ({ request }) => {
+  const response = await request.get("/HoldingNuts_3D/status/2108712786863755502", { headers: { "User-Agent": "Discordbot/2.0" } });
+  expect(await response.text()).not.toContain('rel="discord:component-embed"');
+  const absent = await request.get("/HoldingNuts_3D/status/1/discord.json");
+  expect(absent.status()).toBe(404);
+  expect(absent.headers()["cache-control"]).toBe("no-store");
+  const transient = await request.get("/TransientUser/status/999999999999/discord.json");
+  expect(transient.status()).toBe(503);
+});

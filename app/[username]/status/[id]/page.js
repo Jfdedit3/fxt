@@ -2,6 +2,7 @@ import Link from "next/link";
 import { cache } from "react";
 import { notFound, redirect } from "next/navigation";
 import CopyLinkButton from "./CopyLinkButton";
+import { discordMetadata } from "../../../discord-head.mjs";
 import AccountIdentity from "../../../AccountIdentity";
 import { getPostResult, validParams } from "../../../post-data.mjs";
 import { mediaOf, mediaUrl, mediaMimeType, isGif, isVideo, thumbnailUrl, previewImage, previewVideo, gifDownloadUrl, videoDownloadUrl, videoPlaybackUrl } from "../../../post-media.mjs";
@@ -61,6 +62,7 @@ export async function generateMetadata({ params }) {
     title,
     description,
     alternates: { canonical },
+    ...await discordMetadata(post, siteOrigin()),
     openGraph: {
       type: videoUrl ? "video.other" : "article",
       title,
