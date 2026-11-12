@@ -1,3 +1,4 @@
+import { validChannelRef, originalChannelUrl, channelTab } from "../youtube-channel-url.mjs";
 import { translate } from "../i18n.mjs";
 import { validYouTubeId, youtubeOriginalUrl } from "../youtube-url.mjs";
 const escape = value => value.replace(/[&<>"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
@@ -6,10 +7,12 @@ export function GET(request) {
   let target = "/", original = "";
   try {
     const url = new URL(value, "https://fxt.invalid");
-    if (url.origin === "https://fxt.invalid" && (/^\/[a-zA-Z0-9_]{1,50}(?:\/status\/\d{1,30}(?:\/player)?)?$/.test(url.pathname) || /^\/youtube\/(post|watch|shorts)\/[A-Za-z0-9_-]{11,102}$/.test(url.pathname))) {
+    const channel = /^\/youtube\/channel\/([^/]+)$/.exec(decodeURIComponent(url.pathname));
+    if (url.origin === "https://fxt.invalid" && (channel && validChannelRef(channel[1]) ||/^\/[a-zA-Z0-9_]{1,50}(?:\/status\/\d{1,30}(?:\/player)?)?$/.test(url.pathname) || /^\/youtube\/(post|watch|shorts)\/[A-Za-z0-9_-]{11,102}$/.test(url.pathname))) {
       target = url.pathname + url.search;
       const youtube = /^\/youtube\/(post|watch|shorts)\/([^/]+)$/.exec(url.pathname);
-      if (youtube && validYouTubeId(youtube[1], youtube[2])) original = youtubeOriginalUrl(youtube[1], youtube[2]);
+      if (channel) original = originalChannelUrl(channel[1], channelTab(url.searchParams.get("tab")));
+      else if (youtube && validYouTubeId(youtube[1], youtube[2])) original = youtubeOriginalUrl(youtube[1], youtube[2]);
       else if (!youtube) original = `https://x.com${url.pathname}`;
     }
   } catch { /* Keep a safe local retry link. */ }

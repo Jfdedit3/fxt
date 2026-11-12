@@ -12,7 +12,7 @@ test("YouTube links accept posts, videos, shorts and sharing hosts without track
   assert.equal(normalizeYouTubeUrl(`https://youtube.com/post/${id}?surface=shorts&data=tracking`), `/youtube/post/${id}`);
   for (const url of ["https://youtube.com/watch?v=jNQXAC9IVRw&si=tracking", "youtu.be/jNQXAC9IVRw?t=12", "https://m.youtube.com/live/jNQXAC9IVRw"]) assert.equal(normalizeYouTubeUrl(url), "/youtube/watch/jNQXAC9IVRw");
   assert.equal(normalizeYouTubeUrl("https://youtube.com/shorts/jNQXAC9IVRw?si=tracking"), "/youtube/shorts/jNQXAC9IVRw");
-  for (const url of ["https://youtube.com.evil.test/watch?v=jNQXAC9IVRw", "https://user@youtube.com/watch?v=jNQXAC9IVRw", "https://youtube.com:444/watch?v=jNQXAC9IVRw", "https://youtube.com/watch?v=../", "https://youtube.com/@creator"]) assert.equal(normalizeYouTubeUrl(url), null);
+  for (const url of ["https://youtube.com.evil.test/watch?v=jNQXAC9IVRw", "https://user@youtube.com/watch?v=jNQXAC9IVRw", "https://youtube.com:444/watch?v=jNQXAC9IVRw", "https://youtube.com/watch?v=../"]) assert.equal(normalizeYouTubeUrl(url), null);
   assert.equal(validYouTubeId("invalid", "jNQXAC9IVRw"), false);
 });
 

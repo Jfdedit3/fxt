@@ -12,7 +12,7 @@ export default function Home() {
   function submit(e) {
     e.preventDefault();
     const path = normalizeYouTubeUrl(url) || normalizeXUrl(url);
-    if (!path) { setError("Enter an X/Twitter profile or post, or a YouTube video, Short or community post URL."); return; }
+    if (!path) { setError("Enter an X/Twitter profile or post, or a YouTube channel, video, Short or community post URL."); return; }
     window.location.href = path;
   }
   return <main className="shell">

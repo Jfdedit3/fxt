@@ -1,3 +1,4 @@
+import { channelRefFromUrl } from "./youtube-channel-url.mjs";
 import { validYouTubeId, youtubeOriginalUrl } from "./youtube-url.mjs";
 
 const text = value => typeof value === "string" ? value : value?.simpleText || value?.content || value?.runs?.map(run => run.text || "").join("") || "";
@@ -62,7 +63,7 @@ export function parseYouTubeHtml(html, kind, id) {
     const attachedVideo = find(attachment, node => typeof node.videoId === "string" && validYouTubeId("watch", node.videoId));
     const body = text(post.contentText);
     const channelId = post.authorEndpoint?.browseEndpoint?.browseId;
-    return { state: "ready", item: { kind, id, title: body.slice(0, 120) || "YouTube community post", text: body, author: text(post.authorText) || "YouTube creator", channelId: /^UC[A-Za-z0-9_-]{22}$/.test(channelId) ? channelId : null, published: text(post.publishedTimeText), likes: text(post.voteCount), images: images.slice(0, 10), videoId: attachedVideo?.videoId || null, originalUrl: youtubeOriginalUrl(kind, id) } };
+    return { state: "ready", item: { kind, id, title: body.slice(0, 120) || "YouTube community post", text: body, author: text(post.authorText) || "YouTube creator", channelId: /^UC[A-Za-z0-9_-]{22}$/.test(channelId) ? channelId : null, avatar: thumbnail(post.authorThumbnail), published: text(post.publishedTimeText), likes: text(post.voteCount), images: images.slice(0, 10), videoId: attachedVideo?.videoId || null, originalUrl: youtubeOriginalUrl(kind, id) } };
   }
   const player = initialJson(html, "ytInitialPlayerResponse");
   const video = player?.videoDetails;
@@ -103,7 +104,7 @@ async function fetchYouTubeResult(kind, id, fetcher = fetch) {
     if (!response.ok) { await response.body?.cancel(); return result; }
     const data = JSON.parse(await limitedText(response));
     if (data.type === "video" && typeof data.title === "string" && typeof data.author_name === "string") {
-      return { state: "ready", item: { kind, id, title: data.title.slice(0, 500), text: "", author: data.author_name.slice(0, 200), images: [youtubeImage(data.thumbnail_url)].filter(Boolean), videoId: id, originalUrl: youtubeOriginalUrl(kind, id) } };
+      return { state: "ready", item: { kind, id, title: data.title.slice(0, 500), text: "", author: data.author_name.slice(0, 200), channelRef: channelRefFromUrl(data.author_url), images: [youtubeImage(data.thumbnail_url)].filter(Boolean), videoId: id, originalUrl: youtubeOriginalUrl(kind, id) } };
     }
   } catch { /* Preserve the source failure rather than inventing video details. */ }
   return result;
@@ -129,3 +130,5 @@ export async function getYouTubeResult(kind, id, fetcher = fetch) {
   }).finally(() => pending.delete(key));
   pending.set(key, task); return task;
 }
+
+export { text as youtubeText, thumbnail as youtubeThumbnail, find as findYouTubeNode, limitedText as limitedYouTubeText };

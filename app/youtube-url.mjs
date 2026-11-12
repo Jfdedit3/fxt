@@ -1,3 +1,4 @@
+import { channelPath } from "./youtube-channel-url.mjs";
 export function validYouTubeId(kind, id) {
   return typeof id === "string" && (kind === "post" ? /^Ug[A-Za-z0-9_-]{10,100}$/.test(id) : ["watch", "shorts"].includes(kind) && /^[A-Za-z0-9_-]{11}$/.test(id));
 }
@@ -11,6 +12,9 @@ export function normalizeYouTubeUrl(value) {
   let kind, id;
   if (host === "youtu.be") { kind = "watch"; id = url.pathname.match(/^\/([^/]+)\/?$/)?.[1]; }
   else if (["youtube.com", "m.youtube.com", "music.youtube.com"].includes(host)) {
+    let channel;
+    try { channel = /^\/(?:channel\/)?(@[^/]+|UC[A-Za-z0-9_-]{22})(?:\/(videos|shorts|posts|community|featured|about))?\/?$/.exec(decodeURIComponent(url.pathname)); } catch { return null; }
+    if (channel) return channelPath(channel[1], channel[2] === "community" ? "posts" : channel[2]);
     if (url.pathname === "/watch") { kind = "watch"; id = url.searchParams.get("v"); }
     else { const match = /^\/(post|shorts|embed|live)\/([^/]+)\/?$/.exec(url.pathname); if (match) { kind = ["embed", "live"].includes(match[1]) ? "watch" : match[1]; id = match[2]; } }
   }

@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 
 export function middleware(request) {
+  const handle = /^\/(@[^/]+)(?:\/(videos|shorts|posts|community))?\/?$/.exec(request.nextUrl.pathname);
+  if (handle) {
+    const target = request.nextUrl.clone(); target.pathname = `/youtube/channel/${handle[1]}`; target.search = "";
+    if (handle[2]) target.searchParams.set("tab", handle[2] === "community" ? "posts" : handle[2]);
+    return NextResponse.redirect(target);
+  }
   if (!/Discordbot\//i.test(request.headers.get("user-agent") || "")) return NextResponse.next();
   const youtube = /^\/youtube\/(post|watch|shorts)\/([A-Za-z0-9_-]+)\/?$/.exec(request.nextUrl.pathname);
   if (youtube) {
@@ -18,4 +24,4 @@ export function middleware(request) {
   return NextResponse.rewrite(target);
 }
 
-export const config = { matcher: ["/:username/status/:id", "/youtube/:kind/:id"] };
+export const config = { matcher: ["/:username/status/:id", "/youtube/:kind/:id", "/:handle", "/:handle/:tab"] };

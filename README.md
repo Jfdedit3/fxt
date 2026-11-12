@@ -92,3 +92,11 @@ Replacing `youtube.com` with the Fxt host now works directly for `/post/ID`, `/s
 X and YouTube image galleries open in an accessible modal with previous/next controls, arrow-key navigation and Escape to close. Image downloads use an allowlisted, format-preserving attachment endpoint capped at 8 MiB, 10 seconds, 30 requests/minute/client and 8 concurrent requests per function instance. Mobile sharing uses the native share sheet when supported, with clipboard fallback.
 
 YouTube caches only successfully parsed content for 60 seconds, coalesces simultaneous requests and can use a successful result from the last five minutes during a temporary outage. Confirmed not-found results discard stale data. Consent and challenge HTML are never cached as content. Preview status provides a link to Discord's authenticated embed debugger; final rendering and message cache remain controlled by Discord.
+
+## YouTube channel profiles and clean clipboard links
+
+YouTube handles and channel IDs now open a Fxt profile: `/youtube/channel/@handle` or `/youtube/channel/UC…`. The converter accepts `youtube.com/@handle` and `youtube.com/channel/UC…`, including Videos, Shorts and Community tabs. Direct `/@handle` and `/channel/UC…` aliases support replacing the YouTube domain. Author names in posts/videos link to the local channel profile when YouTube exposes the channel identity; identities are never inferred from display names.
+
+Profiles show available banners, avatars, descriptions and counts, with separate tabs for videos, Shorts and community posts. Each tab lists up to 24 public entries returned in the initial YouTube page; the source link opens the rest on YouTube. Both legacy and modern channel/video card renderers are supported. Channel requests have a 6.5-second deadline and 4-MiB cap; successful results are cached for 60 seconds, and recent data can be reused during temporary outages. Source challenges remain retryable errors.
+
+Copy and native-share actions normalize the URL before use, removing whitespace, line breaks and invisible formatting characters. Site origin configuration is trimmed and parsed as an origin so environment-variable whitespace cannot enter generated YouTube links. Clipboard regression tests verify the exact text written.

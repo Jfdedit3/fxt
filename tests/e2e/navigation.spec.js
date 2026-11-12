@@ -180,3 +180,37 @@ test("mobile sharing uses the current Fxt URL and unavailable pages translate sa
   expect(await unavailable.text()).toContain("Temporairement indisponible");
   expect(await unavailable.text()).toContain("https://www.youtube.com/watch?v=jNQXAC9IVRw");
 });
+
+test("YouTube author links open a channel profile with videos, Shorts and community tabs", async ({ page }) => {
+  await page.goto("/youtube/watch/jNQXAC9IVRw");
+  await page.locator(".youtubeAuthor").click();
+  await expect(page.getByRole("heading", { name: "YouTube creator", exact: true })).toBeVisible();
+  await expect(page.locator(".profileAvatar")).toHaveAttribute("src", /avatar/);
+  await expect(page.locator(".channelCounts")).toContainText("123 subscribers");
+  await page.getByRole("link", { name: "Shorts", exact: true }).click();
+  await expect(page.locator(".channelEntry h2")).toHaveText("Channel Short");
+  await page.getByRole("link", { name: "Community posts", exact: true }).click();
+  await expect(page.locator(".channelEntry h2")).toHaveText("Channel community post");
+  await page.locator(".channelEntry a").click();
+  await expect(page.locator(".youtubeAuthor")).toContainText("YouTube creator");
+});
+
+test("YouTube handles convert from the home page and direct aliases resolve", async ({ page, request }) => {
+  await page.goto("/"); await page.getByRole("textbox").fill("https://youtube.com/@FixtureCreator");
+  await page.getByRole("button", { name: "Open link" }).click();
+  await expect(page.locator(".profileHandle")).toHaveText("@FixtureCreator");
+  expect((await request.get("/@FixtureCreator")).status()).toBe(200);
+  expect((await request.get("/channel/UCaaaaaaaaaaaaaaaaaaaaaa")).status()).toBe(200);
+  expect((await request.get("/youtube/channel/@MissingChannel")).status()).toBe(404);
+  expect((await request.get("/youtube/channel/@TransientChannel")).status()).toBe(503);
+});
+
+test("copy writes a single URL without whitespace or invisible characters to the clipboard", async ({ page }) => {
+  await page.addInitScript(() => { Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: async text => { window.copiedFxt = text; } } }); });
+  await page.goto("/youtube/watch/jNQXAC9IVRw");
+  await page.getByRole("button", { name: "Copy Fxt link" }).click();
+  const value = await page.evaluate(() => window.copiedFxt);
+  expect(value).toMatch(/^https?:\/\/[^\s]+\/youtube\/watch\/jNQXAC9IVRw$/);
+  expect(value).not.toMatch(/[\s\u200b-\u200d\ufeff]/);
+  await expect(page.getByRole("button", { name: "Copied!" })).toBeVisible();
+});

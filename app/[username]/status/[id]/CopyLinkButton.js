@@ -1,5 +1,6 @@
 "use client";
 
+import { cleanShareUrl } from "../../../site-url.mjs";
 import { useLanguage } from "../../../Language";
 import { useState } from "react";
 
@@ -11,11 +12,12 @@ export default function CopyLinkButton({ url }) {
   async function copyLink() {
     setError("");
     try {
+      const target = cleanShareUrl(url);
       if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(url);
+        await navigator.clipboard.writeText(target);
       } else {
         const input = document.createElement("textarea");
-        input.value = url;
+        input.value = target;
         input.setAttribute("readonly", "");
         input.style.position = "fixed";
         input.style.opacity = "0";
