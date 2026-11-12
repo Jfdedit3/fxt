@@ -15,17 +15,17 @@ function getSiteOrigin() {
 
 export const metadata = {
   metadataBase: new URL(getSiteOrigin()),
-  title: "Fxt — X, YouTube & Discord, better previews",
-  description: "A fast, privacy-minded alternative for sharing X/Twitter, YouTube and Discord links with rich previews.",
+  title: "Fxt — X & YouTube, better previews",
+  description: "A fast, privacy-minded alternative for sharing X/Twitter and YouTube links with rich previews.",
   openGraph: {
     type: "website",
     siteName: "Fxt",
-    title: "Fxt — X, YouTube & Discord, better previews",
+    title: "Fxt — X & YouTube, better previews",
     description: "Share X posts with rich previews."
   },
   twitter: {
     card: "summary_large_image",
-    title: "Fxt — X, YouTube & Discord, better previews",
+    title: "Fxt — X & YouTube, better previews",
     description: "Share X posts with rich previews."
   }
 };

@@ -50,8 +50,6 @@
 .healthChecks small { color:var(--muted); }
 .postCard>button,.profilePagination>button { border:0; border-radius:10px; padding:12px 18px; color:#0b0c13; background:linear-gradient(110deg,#b5a0ff,#7cddf4); font:inherit; cursor:pointer; }
 button:disabled { opacity:.55; cursor:default; }
-.discordBadges { display:flex; flex-wrap:wrap; gap:8px; padding:0; list-style:none; }
-.discordBadges li { padding:5px 9px; border-radius:20px; border:1px solid var(--line); font-size:12px; }
 .eyebrow { max-width:100%; line-height:1.5; }
 .pulse { flex-shrink:0; }
 footer { flex-wrap:wrap; gap:14px; }

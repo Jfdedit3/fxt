@@ -9,15 +9,6 @@ const mixedMedia = { id: "1874143352154968122", author: { ...author, screen_name
 
 globalThis.fetch = async function(input, options) {
   const href = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-  if (href.startsWith("https://api.lanyard.rest/v1/users/")) {
-    const id = href.split("/").pop();
-    if (id === "123456789012345679") return new Response(null, { status: 404 });
-    return Response.json({ success: true, data: { discord_user: { id, username: "publicdiscord", global_name: "Public Discord user", avatar: "a".repeat(32), public_flags: 4194304 }, discord_status: "online" } });
-  }
-  if (href.startsWith("https://discord.com/api/v10/invites/")) {
-    if (href.includes("expired-invite")) return new Response(null, { status: 404 });
-    return Response.json({ guild: { id: "123456789012345678", name: "Public Discord server", description: "Public server description", icon: "a".repeat(32) }, approximate_member_count: 1200, approximate_presence_count: 123 });
-  }
   if (href === "https://yt3.ggpht.com/community-1=s640") return new Response(new Uint8Array([137, 80, 78, 71]), { headers: { "Content-Type": "image/png" } });
   if (href.startsWith("https://www.youtube.com/")) {
     const url = new URL(href);

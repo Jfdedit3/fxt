@@ -264,23 +264,9 @@ test("mobile gallery supports swiping, zooming and a graceful fullscreen fallbac
   expect(await page.evaluate(() => Boolean(document.fullscreenElement)) || await page.getByRole("status").count() > 0).toBeTruthy();
 });
 
-test("Discord user and server links open public profiles and restricted users stay honest", async ({ page, request }) => {
-  await page.goto("/"); await page.getByRole("textbox").fill("https://discord.gg/discord-developers");
-  await page.getByRole("button", { name: "Open link" }).click();
-  await expect(page.getByRole("heading", { name: "Public Discord server" })).toBeVisible();
-  await expect(page.locator(".profileStats")).toContainText("1,200");
-  await page.goto("/discord/users/268798547439255572");
-  await expect(page.getByRole("heading", { name: "Public Discord user" })).toBeVisible();
-  await expect(page.locator(".discordPresence")).toHaveText("Online");
-  await page.goto("/discord/users/123456789012345679");
-  await expect(page.getByText("This user’s profile is not available publicly.", { exact: true })).toBeVisible();
-  expect((await request.get("/discord/invite/expired-invite")).status()).toBe(404);
-  expect((await request.get("/users/268798547439255572")).status()).toBe(200);
-});
-
 test("service status checks public sample parsing and exposes a readable dashboard", async ({ page, request }) => {
   const response = await request.get("/api/health"); expect(response.status()).toBe(200);
-  const health = await response.json(); expect(health.status).toBe("operational"); expect(health.checks).toHaveLength(5);
+  const health = await response.json(); expect(health.status).toBe("operational"); expect(health.checks).toHaveLength(4);
   await page.goto("/status");
   await expect(page.getByText("All checks passed", { exact: true })).toBeVisible();
   await page.locator("#site-language").selectOption("fr");
@@ -300,4 +286,16 @@ test("two-finger pinch enlarges the gallery image without navigating away", asyn
   await expect(page.getByRole("button", { name: "Reset zoom" })).not.toHaveText("100%");
   await expect(page.getByRole("dialog").locator("img")).toHaveAttribute("src", /community-1/);
   await cdp.detach();
+});
+
+
+test("Discord account/server integration is removed while X and YouTube previews remain", async ({ page, request }) => {
+  await page.goto("/");
+  await page.getByRole("textbox").fill("https://discord.com/users/1509191640743546891");
+  await page.getByRole("button", { name: "Open link" }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "Enter an X/Twitter" })).toBeVisible();
+  expect((await request.get("/discord/users/1509191640743546891")).status()).toBe(404);
+  expect((await request.get("/discord/invite/discord-developers")).status()).toBe(404);
+  const post = await request.get("/GodoffuryN/status/2120247287821529191", { headers: { "User-Agent": "Discordbot/2.0" } });
+  expect(await post.text()).toContain('id="discord:component-embed"');
 });

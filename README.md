@@ -109,14 +109,8 @@ Legacy `/c/name` and `/user/name` channel URLs work in the converter and by repl
 
 Mobile galleries support swipe navigation, two-pointer pinch zoom, zoom buttons, double-click zoom, drag-to-pan when enlarged and fullscreen where the browser supports it. French formatting now covers upstream YouTube subscriber/video/view labels and relative publication dates, without translating creator text.
 
-## Discord users and servers
-
-The converter accepts `discord.com/users/ID`, `discord.gg/code` and `discord.com/invite/code`. Fxt pages live at `/discord/users/ID` and `/discord/invite/code`; `/users/ID` and `/invite/code` are aliases. Public invite data supplies a server's icon, banner, description and approximate membership/presence counts.
-
-Discord user details use public Lanyard opt-in data. Users who do not expose a public profile get an explicit restricted-profile page and an Open in Discord link; a Lanyard 404 is never presented as proof that a Discord account does not exist. An optional server-only `DISCORD_BOT_TOKEN` Vercel variable enables Discord's authenticated basic-user endpoint. Never use a personal account token or a `NEXT_PUBLIC_` variable for this value. No token is required for public invites or Lanyard profiles. Profile data is bounded, fetched from fixed hosts and successful results cached for 60 seconds. Private account details are not available.
-
 ## Source monitoring
 
-`/status` displays active checks of fixed public X, YouTube-video/post/channel and Discord-server samples. `/api/health` returns HTTP 200 or 503 and an aggregate JSON report, without source bodies, account tokens or visitor data. Checks are coalesced/cached for 60 seconds per instance and rate-limited. A failed sample can mean an individual sample became unavailable; it is not a guarantee of a platform-wide outage.
+`/status` displays active checks of fixed public X and YouTube video/post/channel samples. `/api/health` returns HTTP 200 or 503 and an aggregate JSON report, without source bodies, account tokens or visitor data. Checks are coalesced/cached for 60 seconds per instance and rate-limited. A failed sample can mean an individual sample became unavailable; it is not a guarantee of a platform-wide outage.
 
 The `Monitor public sources` GitHub Actions workflow runs every six hours (and manually), fails when a source check fails, and retains JSON reports for 14 days. Notification delivery follows the repository owner's GitHub Actions notification settings. Monitoring does not post messages or send email itself.
