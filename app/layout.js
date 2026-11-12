@@ -1,4 +1,6 @@
 import "./globals.css";
+import { cookies } from "next/headers";
+import Language from "./Language";
 
 function getSiteOrigin() {
   const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim();
@@ -13,21 +15,22 @@ function getSiteOrigin() {
 
 export const metadata = {
   metadataBase: new URL(getSiteOrigin()),
-  title: "Fxt — X links, better previews",
-  description: "A fast, privacy-minded alternative for sharing X/Twitter posts with rich previews.",
+  title: "Fxt — X & YouTube, better previews",
+  description: "A fast, privacy-minded alternative for sharing X/Twitter and YouTube posts with rich previews.",
   openGraph: {
     type: "website",
     siteName: "Fxt",
-    title: "Fxt — X links, better previews",
+    title: "Fxt — X & YouTube, better previews",
     description: "Share X posts with rich previews."
   },
   twitter: {
     card: "summary_large_image",
-    title: "Fxt — X links, better previews",
+    title: "Fxt — X & YouTube, better previews",
     description: "Share X posts with rich previews."
   }
 };
 
-export default function RootLayout({ children }) {
-  return <html lang="en"><body>{children}</body></html>;
+export default async function RootLayout({ children }) {
+  const language = (await cookies()).get("fxt_language")?.value === "fr" ? "fr" : "en";
+  return <html lang={language}><body><Language initialLanguage={language}>{children}</Language></body></html>;
 }

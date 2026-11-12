@@ -61,7 +61,8 @@ export function parseYouTubeHtml(html, kind, id) {
     }
     const attachedVideo = find(attachment, node => typeof node.videoId === "string" && validYouTubeId("watch", node.videoId));
     const body = text(post.contentText);
-    return { state: "ready", item: { kind, id, title: body.slice(0, 120) || "YouTube community post", text: body, author: text(post.authorText) || "YouTube creator", published: text(post.publishedTimeText), likes: text(post.voteCount), images: images.slice(0, 10), videoId: attachedVideo?.videoId || null, originalUrl: youtubeOriginalUrl(kind, id) } };
+    const channelId = post.authorEndpoint?.browseEndpoint?.browseId;
+    return { state: "ready", item: { kind, id, title: body.slice(0, 120) || "YouTube community post", text: body, author: text(post.authorText) || "YouTube creator", channelId: /^UC[A-Za-z0-9_-]{22}$/.test(channelId) ? channelId : null, published: text(post.publishedTimeText), likes: text(post.voteCount), images: images.slice(0, 10), videoId: attachedVideo?.videoId || null, originalUrl: youtubeOriginalUrl(kind, id) } };
   }
   const player = initialJson(html, "ytInitialPlayerResponse");
   const video = player?.videoDetails;
@@ -69,7 +70,10 @@ export function parseYouTubeHtml(html, kind, id) {
     const unavailable = ["ERROR", "UNPLAYABLE"].includes(player?.playabilityStatus?.status);
     return { state: unavailable ? "not-found" : "unavailable", item: null };
   }
-  return { state: "ready", item: { kind, id, title: text(video.title), text: text(video.shortDescription), author: text(video.author), channelId: /^UC[A-Za-z0-9_-]{22}$/.test(video.channelId) ? video.channelId : null, views: /^\d+$/.test(String(video.viewCount)) ? String(video.viewCount) : null, duration: /^\d+$/.test(String(video.lengthSeconds)) ? Number(video.lengthSeconds) : null, images: [thumbnail(video.thumbnail)].filter(Boolean), videoId: id, originalUrl: youtubeOriginalUrl(kind, id) } };
+  const details = find(initialJson(html, "ytInitialData"), node => Boolean(node.videoPrimaryInfoRenderer))?.videoPrimaryInfoRenderer;
+  const likeButton = find(details?.videoActions, node => Boolean(node.segmentedLikeDislikeButtonRenderer))?.segmentedLikeDislikeButtonRenderer?.likeButton?.toggleButtonRenderer;
+  const likes = text(video.likeCount) || text(likeButton?.defaultText);
+  return { state: "ready", item: { kind, id, title: text(video.title), text: text(video.shortDescription), author: text(video.author), published: text(player?.microformat?.playerMicroformatRenderer?.publishDate) || text(player?.microformat?.playerMicroformatRenderer?.uploadDate), likes, channelId: /^UC[A-Za-z0-9_-]{22}$/.test(video.channelId) ? video.channelId : null, views: /^\d+$/.test(String(video.viewCount)) ? String(video.viewCount) : null, duration: /^\d+$/.test(String(video.lengthSeconds)) ? Number(video.lengthSeconds) : null, images: [thumbnail(video.thumbnail)].filter(Boolean), videoId: id, originalUrl: youtubeOriginalUrl(kind, id) } };
 }
 
 async function limitedText(response) {
@@ -81,21 +85,21 @@ async function limitedText(response) {
   return Buffer.concat(chunks).toString("utf8");
 }
 
-export async function getYouTubeResult(kind, id, fetcher = fetch) {
+async function fetchYouTubeResult(kind, id, fetcher = fetch) {
   if (!validYouTubeId(kind, id)) return { state: "not-found", item: null };
   // Shorts share the watch-page metadata schema; no signed stream scraping.
   const source = kind === "post" ? youtubeOriginalUrl(kind, id) : youtubeOriginalUrl("watch", id);
   const signal = AbortSignal.timeout(6500);
   let result = { state: "unavailable", item: null };
   try {
-    const response = await fetcher(`${source}${source.includes("?") ? "&" : "?"}hl=en`, { headers: { "User-Agent": "Mozilla/5.0 (compatible; FxtPreview/1.0)", "Accept-Language": "en-US,en;q=0.9", Cookie: "SOCS=CAI" }, signal, redirect: "error", ...(process.env.FXT_E2E === "1" ? { cache: "no-store" } : { next: { revalidate: 60 } }) });
+    const response = await fetcher(`${source}${source.includes("?") ? "&" : "?"}hl=en`, { headers: { "User-Agent": "Mozilla/5.0 (compatible; FxtPreview/1.0)", "Accept-Language": "en-US,en;q=0.9", Cookie: "SOCS=CAI" }, signal, redirect: "error", cache: "no-store" });
     if (response.ok) result = parseYouTubeHtml(await limitedText(response), kind, id);
     else { await response.body?.cancel(); if (response.status === 404) return { state: "not-found", item: null }; }
   } catch { /* Try public oEmbed metadata for videos within the same deadline. */ }
   if (result.item || kind === "post" || result.state === "not-found" || signal.aborted) return result;
   try {
     const endpoint = `https://www.youtube.com/oembed?url=${encodeURIComponent(youtubeOriginalUrl("watch", id))}&format=json`;
-    const response = await fetcher(endpoint, { signal, redirect: "error", ...(process.env.FXT_E2E === "1" ? { cache: "no-store" } : { next: { revalidate: 60 } }) });
+    const response = await fetcher(endpoint, { signal, redirect: "error", cache: "no-store" });
     if (!response.ok) { await response.body?.cancel(); return result; }
     const data = JSON.parse(await limitedText(response));
     if (data.type === "video" && typeof data.title === "string" && typeof data.author_name === "string") {
@@ -103,4 +107,25 @@ export async function getYouTubeResult(kind, id, fetcher = fetch) {
     }
   } catch { /* Preserve the source failure rather than inventing video details. */ }
   return result;
+}
+
+
+const successes = new Map();
+const pending = new Map();
+export async function getYouTubeResult(kind, id, fetcher = fetch) {
+  // Cache only parsed successes: a 200 response containing a bot/consent screen
+  // must never hide a recovered post. Custom fetchers bypass shared state.
+  if (fetcher !== fetch || process.env.FXT_E2E === "1") return fetchYouTubeResult(kind, id, fetcher);
+  if (!validYouTubeId(kind, id)) return { state: "not-found", item: null };
+  const key = `${kind}:${id}`; const now = Date.now(); const saved = successes.get(key);
+  if (saved && now - saved.at < 60000) return saved.result;
+  if (pending.has(key)) return pending.get(key);
+  if (pending.size >= 100) return { state: "unavailable", item: null };
+  const task = fetchYouTubeResult(kind, id).then(result => {
+    if (result.item) { if (successes.size >= 200 && !successes.has(key)) successes.delete(successes.keys().next().value); successes.set(key, { at: Date.now(), result }); }
+    if (result.state === "not-found") successes.delete(key);
+    if (result.state === "unavailable" && saved && Date.now() - saved.at < 300000) return { ...saved.result, stale: true };
+    return result;
+  }).finally(() => pending.delete(key));
+  pending.set(key, task); return task;
 }

@@ -1,3 +1,4 @@
+import { T } from "../../../Language";
 import Link from "next/link";
 import AccountIdentity from "../../../AccountIdentity";
 import { formatCount, localPostUrl, pollChoices, postStats, postText, replyContext, safeExternalUrl, textValue } from "../../../post-info.mjs";
@@ -5,8 +6,8 @@ import { formatCount, localPostUrl, pollChoices, postStats, postText, replyConte
 export function PostContext({ post }) {
   const reply = replyContext(post);
   return <>
-    {reply && <p className="postContext">Replying to <Link href={reply.href}>@{reply.handle}</Link></p>}
-    {post.possibly_sensitive === true && <p className="sensitiveNotice">This post may contain sensitive media.</p>}
+    {reply && <p className="postContext"><T>Replying to</T> <Link href={reply.href}>@{reply.handle}</Link></p>}
+    {post.possibly_sensitive === true && <p className="sensitiveNotice"><T>This post may contain sensitive media.</T></p>}
   </>;
 }
 
@@ -14,7 +15,7 @@ export function PostStatistics({ post }) {
   const stats = postStats(post);
   if (!stats.length) return null;
   return <dl className="postStats" aria-label="Post statistics">
-    {stats.map(({ key, label, value }) => <div key={key}><dt>{label}</dt><dd>{formatCount(value)}</dd></div>)}
+    {stats.map(({ key, label, value }) => <div key={key}><dt><T>{label}</T></dt><dd>{formatCount(value)}</dd></div>)}
   </dl>;
 }
 
@@ -26,13 +27,13 @@ export function AuthorDetails({ author }) {
   const website = safeExternalUrl(typeof author.website === "object" ? author.website?.url : author.website);
   if (!bio && followers === null && following === null && !location && !website) return null;
   return <details className="authorDetails">
-    <summary>About the author</summary>
+    <summary><T>About the author</T></summary>
     {bio && <p className="detailText">{bio}</p>}
     <ul className="authorFacts">
-      {followers !== null && <li><strong>{followers}</strong> followers</li>}
-      {following !== null && <li><strong>{following}</strong> following</li>}
+      {followers !== null && <li><strong>{followers}</strong> <T>followers</T></li>}
+      {following !== null && <li><strong>{following}</strong> <T>following</T></li>}
       {location && <li>{location}</li>}
-      {website && <li><a href={website} target="_blank" rel="noreferrer">Website ↗</a></li>}
+      {website && <li><a href={website} target="_blank" rel="noreferrer"><T>Website ↗</T></a></li>}
     </ul>
   </details>;
 }
@@ -51,22 +52,22 @@ export default function PostDetails({ post }) {
   const language = textValue(post.lang);
   return <>
     {quote && <section className="detailPanel quotedPost" aria-label="Quoted post">
-      <h2>Quoted post</h2>
-      {quote.type === "tombstone" ? <p>Quoted post unavailable.</p> : <>
+      <h2><T>Quoted post</T></h2>
+      {quote.type === "tombstone" ? <p><T>Quoted post unavailable.</T></p> : <>
         <AccountIdentity author={quote.author || quote.user || {}} />
-        <p className="detailText">{postText(quote) || "This post contains media."}</p>
+        <p className="detailText">{postText(quote) || <T>This post contains media.</T>}</p>
         {quoteImage && <img className="postMedia" src={quoteImage} alt="Media from quoted post" loading="lazy" />}
-        {quotedUrl && <Link className="detailLink" href={quotedUrl}>View quoted post ↗</Link>}
+        {quotedUrl && <Link className="detailLink" href={quotedUrl}><T>View quoted post ↗</T></Link>}
       </>}
     </section>}
     {choices.length > 0 && <section className="detailPanel" aria-label="Poll results">
-      <h2>Poll</h2>
+      <h2><T>Poll</T></h2>
       <ul className="pollChoices">{choices.map((choice, index) => <li key={index}>
         <div><span>{choice.label}</span><strong>{choice.percent.toFixed(1)}%</strong></div>
         <meter min="0" max="100" value={choice.percent} aria-label={choice.label} />
-        {choice.count !== null && <small>{formatCount(choice.count)} votes</small>}
+        {choice.count !== null && <small>{formatCount(choice.count)} <T>votes</T></small>}
       </li>)}</ul>
-      <p className="detailMeta">{votes !== null ? `${votes} votes` : "Results from X"}{textValue(post.poll.time_left_en) ? ` · ${post.poll.time_left_en}` : ""}. Vote on X.</p>
+      <p className="detailMeta">{votes !== null ? <>{votes} <T>votes</T></> : <T>Results from X</T>}{textValue(post.poll.time_left_en) ? ` · ${post.poll.time_left_en}` : ""}. <T>Vote on X.</T></p>
     </section>}
     {cardUrl && <a className="detailPanel linkCard" href={cardUrl} target="_blank" rel="noreferrer">
       {cardImage && <img src={cardImage} alt={textValue(card.image?.alt)} loading="lazy" />}
@@ -74,7 +75,7 @@ export default function PostDetails({ post }) {
       <strong>{textValue(card.title) || cardUrl}</strong>
       {textValue(card.description) && <span>{card.description}</span>}
     </a>}
-    {note && <section className="detailPanel communityNote"><h2>Community note</h2><p className="detailText">{note}</p></section>}
-    {language && language !== "und" && <p className="detailMeta">Post language: {language}</p>}
+    {note && <section className="detailPanel communityNote"><h2><T>Community note</T></h2><p className="detailText">{note}</p></section>}
+    {language && language !== "und" && <p className="detailMeta"><T>Post language:</T> {language}</p>}
   </>;
 }

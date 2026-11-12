@@ -1,3 +1,7 @@
+import ImageGallery from "../../../ImageGallery";
+import ShareButton from "../../../ShareButton";
+import PreviewStatus from "../../../PreviewStatus";
+import { T, LocalDate } from "../../../Language";
 import Link from "next/link";
 import { cache } from "react";
 import { notFound, redirect } from "next/navigation";
@@ -31,16 +35,6 @@ function authorHandle(post, username) {
   return post?.author?.screen_name || post?.user?.screen_name || username;
 }
 
-function displayDate(value) {
-  if (!value) return null;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
-  return new Intl.DateTimeFormat("en", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "UTC"
-  }).format(date) + " UTC";
-}
 
 export async function generateMetadata({ params }) {
   const { username, id } = await params;
@@ -96,29 +90,30 @@ export default async function PostPage({ params }) {
   const currentUrl = `${siteOrigin()}/${handle}/status/${id}`;
 
   const author = post.author || post.user || {};
-  const date = displayDate(post.created_at || post.date);
+  const date = post.created_at || post.date;
   const media = mediaOf(post);
+  const images = media.filter(item => !isVideo(item)).map(item => ({ url: safeExternalUrl(mediaUrl(item)), alt: typeof item.altText === "string" ? item.altText : "" })).filter(item => item.url);
 
   return (
     <main className="postShell">
       <nav className="postNav">
         <Link className="brand" href="/"><span className="brandMark">f</span> fxt<span className="brandDot">.</span></Link>
-        <a className="plainLink" href={originalUrl} target="_blank" rel="noreferrer">Original post ↗</a>
+        <a className="plainLink" href={originalUrl} target="_blank" rel="noreferrer"><T>Original post ↗</T></a>
       </nav>
       <article className="postCard">
-        <div className="postBadge"><span className="pulse" /> X POST PREVIEW</div>
+        <div className="postBadge"><span className="pulse" /> <T>X POST PREVIEW</T></div>
         <AccountIdentity author={author} fallbackHandle={username}>
           <a className="xIcon" href={originalUrl} target="_blank" rel="noreferrer" aria-label="Open original post">𝕏</a>
         </AccountIdentity>
         <AuthorDetails author={author} />
         <PostContext post={post} />
-        <p className="postText">{postText(post) || "This post contains media."}</p>
+        <p className="postText">{postText(post) || <T>This post contains media.</T>}</p>
         {media.map((item, index) => {
           const source = safeExternalUrl(mediaUrl(item));
           const playbackSource = isVideo(item) && source ? videoPlaybackUrl(source) : source;
           const poster = safeExternalUrl(thumbnailUrl(item));
           if (!source && !poster) return null;
-          if (isVideo(item) && source && !mediaMimeType(item)) return <a className="detailLink" key={index} href={source} target="_blank" rel="noreferrer">Open external video ↗</a>;
+          if (isVideo(item) && source && !mediaMimeType(item)) return <a className="detailLink" key={index} href={source} target="_blank" rel="noreferrer"><T>Open external video ↗</T></a>;
           if (isVideo(item) && playbackSource) {
             return (
               <div className="videoBlock" key={index}>
@@ -126,26 +121,22 @@ export default async function PostPage({ params }) {
                   <source src={playbackSource} type={mediaMimeType(item)} />
                   Your browser does not support embedded video.
                 </video>
-                {isGif(item) ? gifDownloadUrl(source) && <a className="mediaDownload" href={gifDownloadUrl(source, `fxt-${username}-${id}-${index + 1}.gif`)} download>Download GIF ↓</a> : videoDownloadUrl(source) && <a className="mediaDownload" href={videoDownloadUrl(source, `fxt-${username}-${id}-${index + 1}.mp4`)} download>Download MP4 ↓</a>}
+                {isGif(item) ? gifDownloadUrl(source) && <a className="mediaDownload" href={gifDownloadUrl(source, `fxt-${username}-${id}-${index + 1}.gif`)} download><T>Download GIF ↓</T></a> : videoDownloadUrl(source) && <a className="mediaDownload" href={videoDownloadUrl(source, `fxt-${username}-${id}-${index + 1}.mp4`)} download><T>Download MP4 ↓</T></a>}
               </div>
             );
           }
-          const image = source || poster;
-          return (
-            <a key={index} href={image} target="_blank" rel="noreferrer">
-              <img className="postMedia" src={image} alt={typeof item.altText === "string" && item.altText.trim() ? item.altText : `Media ${index + 1} from post`} loading="lazy" />
-            </a>
-          );
+          return null;
         })}
+        <ImageGallery images={images} />
         <PostDetails post={post} />
-        {date && <p className="timestamp">{date}</p>}
+        {date && <p className="timestamp"><LocalDate value={date} options={{ dateStyle: "medium", timeStyle: "short" }} /> UTC</p>}
         <PostStatistics post={post} />
-        <div className="postActions">
-          <a href={originalUrl} target="_blank" rel="noreferrer">View on X ↗</a>
-          <CopyLinkButton url={currentUrl} />
+        <PreviewStatus /><div className="postActions">
+          <a href={originalUrl} target="_blank" rel="noreferrer"><T>View on X ↗</T></a>
+          <CopyLinkButton url={currentUrl} /><ShareButton url={currentUrl} />
         </div>
       </article>
-      <p className="privacyNote">Post details and counts may be cached for up to 60 seconds. Availability depends on the upstream source and the visibility of the post.</p>
+      <p className="privacyNote"><T>Post details and counts may be cached for up to 60 seconds. Availability depends on the upstream source and the visibility of the post.</T></p>
     </main>
   );
 }

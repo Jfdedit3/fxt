@@ -1,8 +1,10 @@
 "use client";
 
+import { useLanguage } from "../../../Language";
 import { useState } from "react";
 
 export default function CopyLinkButton({ url }) {
+  const { t } = useLanguage();
   const [label, setLabel] = useState("Copy Fxt link");
   const [error, setError] = useState("");
 
@@ -33,8 +35,8 @@ export default function CopyLinkButton({ url }) {
 
   return (
     <span className="copyControl">
-      <button type="button" className="copyHint" onClick={copyLink}>{label}</button>
-      {error && <span className="copyError" role="status">{error}</span>}
+      <button type="button" className="copyHint" onClick={copyLink}>{t(label)}</button>
+      {error && <span className="copyError" role="status">{t(error)}</span>}
     </span>
   );
 }

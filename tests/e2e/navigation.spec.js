@@ -121,3 +121,62 @@ test("YouTube missing and temporary failures have distinct HTTP responses", asyn
   expect(temporary.headers()["cache-control"]).toContain("no-store");
   expect((await request.get("/youtube/watch/invalid")).status()).toBe(404);
 });
+
+
+test("language choice persists across navigation and reload, and can return to English", async ({ page }) => {
+  await page.goto("/");
+  await page.locator("#site-language").selectOption("fr");
+  await expect(page.getByRole("button", { name: "Ouvrir le lien" })).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("lang", "fr");
+  await page.getByRole("textbox").fill("https://youtube.com/watch?v=jNQXAC9IVRw");
+  await page.getByRole("button", { name: "Ouvrir le lien" }).click();
+  await expect(page.getByRole("button", { name: "Partager" })).toBeVisible();
+  await expect(page.locator(".postCard")).toContainText("Durée: 1:01");
+  await expect(page.locator(".postCard")).toContainText("12 J’aime");
+  await page.reload();
+  await expect(page.locator("#site-language")).toHaveValue("fr");
+  await page.locator("#site-language").selectOption("en");
+  await expect(page.getByRole("button", { name: "Share" })).toBeVisible();
+  await expect(page.locator(".postCard")).toContainText("Duration: 1:01");
+});
+
+test("YouTube domain replacement links resolve to the same pages and Discord galleries", async ({ request }) => {
+  const id = "UgkxvF-Ikos2vcUfuu-7iS9zo0eW2S7c5RYG";
+  const headers = { "User-Agent": "Discordbot/2.0" };
+  const post = await request.get(`/post/${id}?surface=shorts&data=tracking`, { headers });
+  expect(post.status()).toBe(200);
+  expect(await post.text()).toContain('id="discord:component-embed"');
+  const video = await request.get("/watch?v=jNQXAC9IVRw&si=tracking", { headers });
+  expect(new URL(video.url()).pathname).toBe("/youtube/watch/jNQXAC9IVRw");
+  expect(new URL(video.url()).search).toBe("");
+  const short = await request.get("/shorts/jNQXAC9IVRw", { headers });
+  expect(short.status()).toBe(200);
+  expect(await short.text()).toContain("https://www.youtube.com/embed/jNQXAC9IVRw");
+  expect((await request.get("/watch?v=invalid")).status()).toBe(404);
+});
+
+test("mobile galleries enlarge images, navigate with keyboard and download a real attachment", async ({ page, request }) => {
+  await page.goto("/post/UgkxvF-Ikos2vcUfuu-7iS9zo0eW2S7c5RYG");
+  await page.getByRole("button", { name: "Open image 1", exact: true }).click();
+  const dialog = page.getByRole("dialog"); await expect(dialog).toBeVisible();
+  await expect(dialog.locator("img")).toHaveAttribute("src", /community-1/);
+  await page.keyboard.press("ArrowRight");
+  await expect(dialog.locator("img")).toHaveAttribute("src", /community-2/);
+  await page.keyboard.press("Escape"); await expect(dialog).not.toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
+  const download = await request.get("/api/image?url=" + encodeURIComponent("https://yt3.ggpht.com/community-1=s640"));
+  expect(download.status()).toBe(200);
+  expect(download.headers()["content-disposition"]).toContain('attachment; filename="fxt-image.png"');
+  expect((await request.get("/api/image?url=https://example.com/secret")).status()).toBe(400);
+});
+
+test("mobile sharing uses the current Fxt URL and unavailable pages translate safely", async ({ page, request }) => {
+  await page.addInitScript(() => { Object.defineProperty(navigator, "share", { value: async data => { window.sharedPost = data; }, configurable: true }); });
+  await page.goto("/youtube/watch/jNQXAC9IVRw");
+  await page.getByRole("button", { name: "Share" }).click();
+  expect(await page.evaluate(() => window.sharedPost.url)).toContain("/youtube/watch/jNQXAC9IVRw");
+  const unavailable = await request.get("/unavailable?return=%2Fyoutube%2Fwatch%2FjNQXAC9IVRw&lang=fr");
+  expect(unavailable.status()).toBe(503);
+  expect(await unavailable.text()).toContain("Temporairement indisponible");
+  expect(await unavailable.text()).toContain("https://www.youtube.com/watch?v=jNQXAC9IVRw");
+});

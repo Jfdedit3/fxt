@@ -1,3 +1,4 @@
+import { T, LocalDate } from "../Language";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
@@ -44,36 +45,36 @@ export default async function ProfilePage({ params, searchParams }) {
   const tabs = [["posts", "Posts"], ["replies", "Posts & replies"], ["media", "Media"]];
 
   return <main className="profileShell">
-    <nav className="profileNav" aria-label="Profile navigation"><Link className="profileBack" href="/" aria-label="Back to Fxt home">←</Link><div><strong>{name}</strong><span>{formatCount(user.statuses) !== null ? `${formatCount(user.statuses)} posts` : `@${user.screen_name}`}</span></div><Link className="brand profileBrand" href="/">fxt<span className="brandDot">.</span></Link></nav>
+    <nav className="profileNav" aria-label="Profile navigation"><Link className="profileBack" href="/" aria-label="Back to Fxt home">←</Link><div><strong>{name}</strong><span>{formatCount(user.statuses) !== null ? <>{formatCount(user.statuses)} <T>Posts</T></> : `@${user.screen_name}`}</span></div><Link className="brand profileBrand" href="/">fxt<span className="brandDot">.</span></Link></nav>
     <section className="profileCard" aria-label={`@${user.screen_name}'s profile`}>
       <div className={`profileBanner${banner ? "" : " profileBannerFallback"}`}>{banner && <img src={banner} alt={`${name}'s profile banner`} />}</div>
       <div className="profileSummary">
         <div className="profileTopRow">
           {avatar ? <img className="profileAvatar" src={avatar} alt={`${name}'s profile photo`} /> : <div className="profileAvatar profileAvatarFallback">{name.slice(0, 1).toUpperCase()}</div>}
-          <a className="profileXLink" href={`https://x.com/${user.screen_name}`} target="_blank" rel="noreferrer">View on X ↗</a>
+          <a className="profileXLink" href={`https://x.com/${user.screen_name}`} target="_blank" rel="noreferrer"><T>View on X ↗</T></a>
         </div>
-        <h1>{name}{verified && <span className="verifiedBadge" title="Verified on X" aria-label="Verified on X"> ✓</span>}{user.protected && <span className="protectedBadge">Protected</span>}</h1>
+        <h1>{name}{verified && <span className="verifiedBadge" title="Verified on X" aria-label="Verified on X"> ✓</span>}{user.protected && <span className="protectedBadge"><T>Protected</T></span>}</h1>
         <p className="profileHandle">@{user.screen_name}</p>
         {textValue(user.description) && <p className="profileBio">{user.description}</p>}
         <ul className="profileFacts">
           {textValue(user.location) && <li>⌖ {user.location}</li>}
           {website && <li><a href={website} target="_blank" rel="noreferrer">↗ {textValue(user.website?.display_url) || new URL(website).hostname}</a></li>}
-          {!Number.isNaN(joined.getTime()) && <li>Joined {new Intl.DateTimeFormat("en", { month: "long", year: "numeric", timeZone: "UTC" }).format(joined)}</li>}
+          {!Number.isNaN(joined.getTime()) && <li><T>Joined</T> <LocalDate value={joined.toISOString()} options={{ month: "long", year: "numeric" }} /></li>}
         </ul>
-        <dl className="profileStats">{stats.map(([key, label]) => <div key={key}><dd>{formatCount(user[key])}</dd><dt>{label}</dt></div>)}</dl>
+        <dl className="profileStats">{stats.map(([key, label]) => <div key={key}><dd>{formatCount(user[key])}</dd><dt><T>{label}</T></dt></div>)}</dl>
       </div>
-      <nav className="profileTabs" aria-label="Profile feeds">{tabs.map(([tab, label]) => <Link key={tab} href={profilePageUrl(user.screen_name, { tab, userId: options.userId })} prefetch={false} aria-current={options.tab === tab ? "page" : undefined}>{label}</Link>)}</nav>
+      <nav className="profileTabs" aria-label="Profile feeds">{tabs.map(([tab, label]) => <Link key={tab} href={profilePageUrl(user.screen_name, { tab, userId: options.userId })} prefetch={false} aria-current={options.tab === tab ? "page" : undefined}><T>{label}</T></Link>)}</nav>
     </section>
     <section className="profileTimeline" aria-label={tabs.find(([tab]) => tab === options.tab)[1]}>
       {timeline.posts.map(post => <FeedPost key={post.id} post={post} />)}
-      {timeline.state === "protected" && <div className="profileEmpty"><h2>These posts are protected</h2><p>Only approved followers can view this account’s posts on X.</p></div>}
-      {timeline.state === "unavailable" && <div className="profileEmpty"><h2>Posts temporarily unavailable</h2><p>The profile loaded, but its posts couldn’t be retrieved. Try again later.</p><Link href={profilePageUrl(user.screen_name, { tab: options.tab, userId: options.userId })} prefetch={false}>Try again →</Link></div>}
-      {timeline.state === "empty" && <div className="profileEmpty"><h2>{options.cursor ? "No more posts to show" : "No posts to show"}</h2><p>No public posts were returned for this feed.</p></div>}
+      {timeline.state === "protected" && <div className="profileEmpty"><h2><T>These posts are protected</T></h2><p><T>Only approved followers can view this account’s posts on X.</T></p></div>}
+      {timeline.state === "unavailable" && <div className="profileEmpty"><h2><T>Posts temporarily unavailable</T></h2><p><T>The profile loaded, but its posts couldn’t be retrieved. Try again later.</T></p><Link href={profilePageUrl(user.screen_name, { tab: options.tab, userId: options.userId })} prefetch={false}><T>Try again →</T></Link></div>}
+      {timeline.state === "empty" && <div className="profileEmpty"><h2><T>{options.cursor ? "No more posts to show" : "No posts to show"}</T></h2><p><T>No public posts were returned for this feed.</T></p></div>}
       <div className="profilePagination">
-        {options.cursor && <Link href={profilePageUrl(user.screen_name, { tab: options.tab, userId: options.userId })} prefetch={false}>↑ Latest posts</Link>}
-        {timeline.nextCursor && <Link href={profilePageUrl(user.screen_name, { tab: options.tab, userId: options.userId, cursor: timeline.nextCursor })} prefetch={false}>Load older posts ↓</Link>}
+        {options.cursor && <Link href={profilePageUrl(user.screen_name, { tab: options.tab, userId: options.userId })} prefetch={false}><T>↑ Latest posts</T></Link>}
+        {timeline.nextCursor && <Link href={profilePageUrl(user.screen_name, { tab: options.tab, userId: options.userId, cursor: timeline.nextCursor })} prefetch={false}><T>Load older posts ↓</T></Link>}
       </div>
     </section>
-    <p className="privacyNote">Public profile data provided by FxTwitter. Information may be cached for up to 60 seconds.</p>
+    <p className="privacyNote"><T>Public profile data provided by FxTwitter. Information may be cached for up to 60 seconds.</T></p>
   </main>;
 }

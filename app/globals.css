@@ -13,3 +13,21 @@
 .videoBlock{margin:12px 0 20px}.videoBlock .postMedia{margin-bottom:8px}.mediaDownload{display:inline-flex;align-items:center;padding:9px 13px;border:1px solid var(--line);border-radius:9px;color:var(--cyan);font-size:12px}.mediaDownload:hover{border-color:var(--cyan)}.mediaDownload:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
 
 .youtubePlayer { width: 100%; aspect-ratio: 16 / 9; border: 0; border-radius: 16px; background: #000; }
+
+.languageBar { display:flex; align-items:center; justify-content:flex-end; gap:10px; max-width:1120px; margin:0 auto; padding:10px 20px; font-size:13px; color:#bdc0d3; }
+.languageBar select { color:#f4f5ff; background:#121322; border:1px solid #34364d; border-radius:8px; padding:7px 10px; font:inherit; }
+.galleryThumbnail { display:block; width:100%; padding:0; border:0; background:transparent; cursor:zoom-in; }
+.galleryThumbnail:focus-visible { outline:2px solid #70e1f5; outline-offset:4px; }
+.galleryDialog { width:min(1100px,95vw); max-width:95vw; max-height:94dvh; padding:16px; border:1px solid #34364d; border-radius:16px; background:#0c0d19; color:#f4f5ff; }
+.galleryDialog::backdrop { background:#000d; }
+.galleryToolbar,.galleryControls { display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; }
+.galleryToolbar button,.galleryControls button { padding:10px 16px; color:#fff; background:#27283f; border:1px solid #454764; border-radius:8px; cursor:pointer; }
+.galleryFullImage { display:block; width:100%; max-height:72dvh; object-fit:contain; margin:12px auto; }
+.galleryControls a { color:#70e1f5; font-size:14px; }
+.postActions { flex-wrap:wrap; }
+.shareControl { display:inline-flex; flex-direction:column; gap:6px; }
+.shareControl button { cursor:pointer; color:inherit; background:transparent; border:1px solid #34364d; border-radius:12px; padding:14px 20px; font:inherit; }
+.shareControl [role=status] { font-size:12px; max-width:250px; }
+.previewStatus { border:1px solid #27283f; border-radius:12px; padding:12px 16px; margin:22px 0; color:#aeb2c9; font-size:14px; }
+.previewStatus summary { cursor:pointer; }
+.previewStatus a { color:#70e1f5; }

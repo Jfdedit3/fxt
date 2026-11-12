@@ -82,3 +82,13 @@ The home-page converter accepts public YouTube community posts (`youtube.com/pos
 Community posts show their text, author and images; Discord receives an inline component gallery. Videos and Shorts use the official YouTube iframe on the website and player metadata for chat clients. Discord decides whether it supports playback of that player. This does not download or proxy YouTube video streams. Videos can fall back to YouTube's public oEmbed metadata.
 
 Public page data is parsed as JSON, without executing YouTube scripts. No API key or cookies from a user account are needed. Requests have a 6.5-second deadline and a 4-MiB response cap. Media URLs are restricted to YouTube image hosts. Deleted content, login/consent pages, bot checks and outages never produce fabricated media or permanent cached errors. Community scraping depends on YouTube's current public-page schema and availability from the server's network. Unit/browser fixtures cover parsing, links, galleries, players, malformed URLs, and source failures; real deployment checks are reported separately.
+
+## Language, galleries, and simplified links
+
+The language selector switches between English and French and remembers the choice in a same-site cookie for a year. It translates interface controls without translating creators' posts. Dates and YouTube view counts follow the selected locale. Error pages also offer both languages.
+
+Replacing `youtube.com` with the Fxt host now works directly for `/post/ID`, `/shorts/ID`, and `/watch?v=ID`. These links resolve to the existing YouTube pages and previews. Available video information includes publication date, duration, channel, views and likes; absent values remain hidden.
+
+X and YouTube image galleries open in an accessible modal with previous/next controls, arrow-key navigation and Escape to close. Image downloads use an allowlisted, format-preserving attachment endpoint capped at 8 MiB, 10 seconds, 30 requests/minute/client and 8 concurrent requests per function instance. Mobile sharing uses the native share sheet when supported, with clipboard fallback.
+
+YouTube caches only successfully parsed content for 60 seconds, coalesces simultaneous requests and can use a successful result from the last five minutes during a temporary outage. Confirmed not-found results discard stale data. Consent and challenge HTML are never cached as content. Preview status provides a link to Discord's authenticated embed debugger; final rendering and message cache remain controlled by Discord.

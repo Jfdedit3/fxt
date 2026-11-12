@@ -60,3 +60,11 @@ test("videos recover through YouTube oEmbed when the watch page is a consent scr
   assert.equal(result.state, "ready"); assert.equal(result.item.title, "Official title");
   assert.equal(result.item.videoId, "jNQXAC9IVRw");
 });
+
+
+test("video details expose available publish date, duration, channel, views and likes", () => {
+  const player = { microformat: { playerMicroformatRenderer: { publishDate: "2025-01-02" } }, videoDetails: { videoId: "jNQXAC9IVRw", title: "Video", author: "Creator", channelId: "UCaaaaaaaaaaaaaaaaaaaaaa", lengthSeconds: "61", viewCount: "123" } };
+  const data = { videoPrimaryInfoRenderer: { videoActions: { menuRenderer: { topLevelButtons: [{ segmentedLikeDislikeButtonRenderer: { likeButton: { toggleButtonRenderer: { defaultText: { simpleText: "12" } } } } }] } } } };
+  const result = parseYouTubeHtml(`var ytInitialPlayerResponse = ${JSON.stringify(player)}; var ytInitialData = ${JSON.stringify(data)};`, "watch", "jNQXAC9IVRw");
+  assert.equal(result.item.duration, 61); assert.equal(result.item.published, "2025-01-02"); assert.equal(result.item.likes, "12"); assert.equal(result.item.channelId, "UCaaaaaaaaaaaaaaaaaaaaaa");
+});
