@@ -74,3 +74,11 @@ The crawler response does not advertise a competing standalone Open Graph/Twitte
 Payloads are limited to 3,000 bytes after script escaping and ten media items. Existing linked JSON remains available. Automated tests cover the normal URL with Discord's exact crawler user agent, inline payload, browser response, missing posts, outages, and the one-video/three-photo case. They do not send a Discord message.
 
 Reference: https://discord.com/developers/link-previews/component-embeds . These previews depend on Discord client support and crawler/media availability; the automated checks validate the HTML head and linked payload, not a message sent to Discord.
+
+## YouTube
+
+The home-page converter accepts public YouTube community posts (`youtube.com/post/Ug…`), videos (`youtube.com/watch?v=…`, `youtu.be/…`) and Shorts (`youtube.com/shorts/…`). It strips tracking parameters and creates `/youtube/post/ID`, `/youtube/watch/ID` or `/youtube/shorts/ID` on the Fxt domain.
+
+Community posts show their text, author and images; Discord receives an inline component gallery. Videos and Shorts use the official YouTube iframe on the website and player metadata for chat clients. Discord decides whether it supports playback of that player. This does not download or proxy YouTube video streams. Videos can fall back to YouTube's public oEmbed metadata.
+
+Public page data is parsed as JSON, without executing YouTube scripts. No API key or cookies from a user account are needed. Requests have a 6.5-second deadline and a 4-MiB response cap. Media URLs are restricted to YouTube image hosts. Deleted content, login/consent pages, bot checks and outages never produce fabricated media or permanent cached errors. Community scraping depends on YouTube's current public-page schema and availability from the server's network. Unit/browser fixtures cover parsing, links, galleries, players, malformed URLs, and source failures; real deployment checks are reported separately.

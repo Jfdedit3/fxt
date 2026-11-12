@@ -2,24 +2,25 @@
 
 import { useState } from "react";
 import { normalizeXUrl } from "./x-url.mjs";
+import { normalizeYouTubeUrl } from "./youtube-url.mjs";
 
 export default function Home() {
   const [url, setUrl] = useState("");
   const [error, setError] = useState("");
   function submit(e) {
     e.preventDefault();
-    const path = normalizeXUrl(url);
-    if (!path) { setError("Enter an X/Twitter post or profile URL, for example x.com/username or x.com/user/status/123456789."); return; }
+    const path = normalizeYouTubeUrl(url) || normalizeXUrl(url);
+    if (!path) { setError("Enter an X/Twitter profile or post, or a YouTube video, Short or community post URL."); return; }
     window.location.href = path;
   }
   return <main className="shell">
     <nav className="nav"><a className="brand" href="/"><span className="brandMark">f</span> fxt<span className="brandDot">.</span></a><span className="navNote">OPEN LINK PREVIEW SERVICE</span></nav>
     <section className="hero">
-      <div className="eyebrow"><span className="pulse" /> A BETTER WAY TO SHARE X</div>
+      <div className="eyebrow"><span className="pulse" /> A BETTER WAY TO SHARE X & YOUTUBE</div>
       <h1>Make every post<br /><span className="gradient">worth the click.</span></h1>
-      <p className="intro">Cleaner previews for X/Twitter links. Paste a post or profile URL to browse it on Fxt and get a shareable link.</p>
+      <p className="intro">Cleaner previews for X/Twitter and YouTube. Paste a post, profile, video or Shorts URL to get a shareable Fxt link.</p>
       <form className="linkForm" onSubmit={submit}>
-        <div className="inputWrap"><span className="inputIcon">↗</span><input aria-label="X post or profile URL" value={url} onChange={e => {setUrl(e.target.value);setError("");}} placeholder="https://x.com/username" autoComplete="url" /></div>
+        <div className="inputWrap"><span className="inputIcon">↗</span><input aria-label="X or YouTube URL" value={url} onChange={e => {setUrl(e.target.value);setError("");}} placeholder="Paste an X or YouTube link" autoComplete="url" /></div>
         <button type="submit">Open link <span>→</span></button>
       </form>
       {error && <p className="error" role="alert">{error}</p>}

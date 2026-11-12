@@ -86,3 +86,38 @@ test("single-video previews keep their fallback and missing component data is no
   const transient = await request.get("/TransientUser/status/999999999999/discord.json");
   expect(transient.status()).toBe(503);
 });
+
+
+test("YouTube community links open a gallery and expose all images inline to Discord", async ({ page, request }) => {
+  const id = "UgkxvF-Ikos2vcUfuu-7iS9zo0eW2S7c5RYG";
+  await page.goto("/");
+  await page.getByRole("textbox").fill(`https://youtube.com/post/${id}?surface=shorts&data=tracking`);
+  await page.getByRole("button", { name: "Open link" }).click();
+  await expect(page).toHaveURL(new RegExp(`/youtube/post/${id}$`));
+  await expect(page.locator(".postCard .postMedia")).toHaveCount(3);
+  await expect(page.getByRole("heading", { name: "YouTube creator" })).toBeVisible();
+  const response = await request.get(`/youtube/post/${id}`, { headers: { "User-Agent": "Discordbot/2.0" } });
+  expect(response.status()).toBe(200);
+  const head = (await response.text()).match(/<head>([\s\S]*?)<\/head>/)[1];
+  const json = head.match(/<script id="discord:component-embed" type="application\/json">([\s\S]*?)<\/script>/)[1];
+  expect(JSON.parse(json).component.components.find(c => c.type === 12).items).toHaveLength(3);
+  expect(Buffer.byteLength(json)).toBeLessThanOrEqual(3000);
+});
+
+for (const kind of ["watch", "shorts"]) test(`YouTube ${kind} has an official browser player and a Discord player preview`, async ({ page, request }) => {
+  await page.goto(`/youtube/${kind}/jNQXAC9IVRw`);
+  await expect(page.locator("iframe")).toHaveAttribute("src", "https://www.youtube-nocookie.com/embed/jNQXAC9IVRw");
+  await expect(page.getByRole("heading", { name: "YouTube video fixture" })).toBeVisible();
+  const response = await request.get(`/youtube/${kind}/jNQXAC9IVRw`, { headers: { "User-Agent": "Discordbot/2.0" } });
+  expect(response.status()).toBe(200);
+  expect(await response.text()).toContain('property="og:video" content="https://www.youtube.com/embed/jNQXAC9IVRw"');
+});
+
+test("YouTube missing and temporary failures have distinct HTTP responses", async ({ request }) => {
+  const headers = { "User-Agent": "Discordbot/2.0" };
+  expect((await request.get("/youtube/post/UgMissingPost12345", { headers })).status()).toBe(404);
+  const temporary = await request.get("/youtube/post/UgTransientPost123", { headers });
+  expect(temporary.status()).toBe(503);
+  expect(temporary.headers()["cache-control"]).toContain("no-store");
+  expect((await request.get("/youtube/watch/invalid")).status()).toBe(404);
+});

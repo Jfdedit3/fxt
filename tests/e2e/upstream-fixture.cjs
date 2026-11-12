@@ -9,6 +9,13 @@ const mixedMedia = { id: "1874143352154968122", author: { ...author, screen_name
 
 globalThis.fetch = async function(input, options) {
   const href = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+  if (href.startsWith("https://www.youtube.com/")) {
+    const url = new URL(href);
+    if (url.pathname.includes("UgMissingPost12345")) return new Response(null, { status: 404 });
+    if (url.pathname.includes("UgTransientPost123")) return new Response("Sign in to continue");
+    if (url.pathname.startsWith("/post/")) return new Response(`var ytInitialData = ${JSON.stringify({ contents: { backstagePostRenderer: { postId: url.pathname.split("/").pop(), authorText: { simpleText: "YouTube creator" }, contentText: { runs: [{ text: "Community gallery fixture" }] }, backstageAttachment: { postMultiImageRenderer: { images: [1, 2, 3].map(index => ({ backstageImageRenderer: { image: { thumbnails: [{ url: `https://yt3.ggpht.com/community-${index}=s640` }] } } })) } } } } })};`);
+    if (url.pathname === "/watch") return new Response(`var ytInitialPlayerResponse = ${JSON.stringify({ videoDetails: { videoId: url.searchParams.get("v"), title: "YouTube video fixture", author: "YouTube creator", shortDescription: "Video description", viewCount: "123", thumbnail: { thumbnails: [{ url: "https://i.ytimg.com/vi/jNQXAC9IVRw/hqdefault.jpg" }] } } })};`);
+  }
   if (!href.startsWith("https://api.fxtwitter.com/")) return original.call(this, input, options);
   const url = new URL(href);
   if (url.pathname === `/2/status/${mixedMedia.id}`) return Response.json({ status: mixedMedia });
