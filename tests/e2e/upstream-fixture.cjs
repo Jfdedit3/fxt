@@ -9,15 +9,31 @@ const mixedMedia = { id: "1874143352154968122", author: { ...author, screen_name
 
 globalThis.fetch = async function(input, options) {
   const href = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+  if (href.startsWith("https://api.lanyard.rest/v1/users/")) {
+    const id = href.split("/").pop();
+    if (id === "123456789012345679") return new Response(null, { status: 404 });
+    return Response.json({ success: true, data: { discord_user: { id, username: "publicdiscord", global_name: "Public Discord user", avatar: "a".repeat(32), public_flags: 4194304 }, discord_status: "online" } });
+  }
+  if (href.startsWith("https://discord.com/api/v10/invites/")) {
+    if (href.includes("expired-invite")) return new Response(null, { status: 404 });
+    return Response.json({ guild: { id: "123456789012345678", name: "Public Discord server", description: "Public server description", icon: "a".repeat(32) }, approximate_member_count: 1200, approximate_presence_count: 123 });
+  }
   if (href === "https://yt3.ggpht.com/community-1=s640") return new Response(new Uint8Array([137, 80, 78, 71]), { headers: { "Content-Type": "image/png" } });
   if (href.startsWith("https://www.youtube.com/")) {
     const url = new URL(href);
+    if (url.pathname === "/youtubei/v1/browse") {
+      const token = JSON.parse(options.body).continuation;
+      if (token === "page-fail") return new Response(null, { status: 503 });
+      const continuationItems = [{ videoRenderer: { videoId: "abcdefghijk", title: { simpleText: "Next channel video" } } }, { videoRenderer: { videoId: "jNQXAC9IVRw", title: { simpleText: "Duplicate video" } } }];
+      return Response.json({ onResponseReceivedActions: [{ appendContinuationItemsAction: { continuationItems } }] });
+    }
     if (url.pathname === "/@MissingChannel/videos") return new Response(null, { status: 404 });
     if (url.pathname === "/@TransientChannel/videos") return new Response("Sign in to continue");
-    if (/^\/(?:@[^/]+|channel\/UC[A-Za-z0-9_-]{22})\/(videos|shorts|posts)$/.test(url.pathname)) {
+    if (/^\/(?:@[^/]+|channel\/UC[A-Za-z0-9_-]{22}|c\/[^/]+|user\/[^/]+)\/(videos|shorts|posts)$/.test(url.pathname)) {
       const tab = url.pathname.split("/").pop();
       const content = tab === "videos" ? { richGridRenderer: { contents: [{ richItemRenderer: { content: { videoRenderer: { videoId: "jNQXAC9IVRw", title: { simpleText: "Channel video" }, thumbnail: { thumbnails: [{ url: "https://i.ytimg.com/vi/jNQXAC9IVRw/hqdefault.jpg" }] } } } } }] } } : tab === "shorts" ? { richGridRenderer: { contents: [{ shortsLockupViewModel: { onTap: { innertubeCommand: { reelWatchEndpoint: { videoId: "jNQXAC9IVRw" } } }, overlayMetadata: { primaryText: { content: "Channel Short" } }, thumbnail: { sources: [{ url: "https://i.ytimg.com/vi/jNQXAC9IVRw/hqdefault.jpg" }] } } }] } } : { sectionListRenderer: { contents: [{ backstagePostRenderer: { postId: "UgkxvF-Ikos2vcUfuu-7iS9zo0eW2S7c5RYG", authorText: { simpleText: "YouTube creator" }, contentText: { simpleText: "Channel community post" } } }] } };
-      return new Response(`var ytInitialData = ${JSON.stringify({ metadata: { channelMetadataRenderer: { externalId: "UCaaaaaaaaaaaaaaaaaaaaaa", title: "YouTube creator", description: "Public creator channel", vanityChannelUrl: "https://www.youtube.com/@FixtureCreator", avatar: { thumbnails: [{ url: "https://yt3.ggpht.com/avatar=s100" }] } } }, header: { c4TabbedHeaderRenderer: { subscriberCountText: { simpleText: "123 subscribers" }, videosCountText: { simpleText: "3 videos" }, banner: { thumbnails: [{ url: "https://yt3.ggpht.com/banner=w1000" }] } } }, contents: { twoColumnBrowseResultsRenderer: { tabs: [{ tabRenderer: { selected: true, content } }] } } })};`);
+      if (tab === "videos") content.richGridRenderer.contents.push({ continuationItemRenderer: { continuationEndpoint: { continuationCommand: { token: "page2" } } } });
+      return new Response(`ytcfg.set({"INNERTUBE_CONTEXT":{"client":{"clientVersion":"2.20261112.00.00"}}}); var ytInitialData = ${JSON.stringify({ metadata: { channelMetadataRenderer: { externalId: "UCaaaaaaaaaaaaaaaaaaaaaa", title: "YouTube creator", description: "Public creator channel", vanityChannelUrl: "https://www.youtube.com/@FixtureCreator", avatar: { thumbnails: [{ url: "https://yt3.ggpht.com/avatar=s100" }] } } }, header: { c4TabbedHeaderRenderer: { subscriberCountText: { simpleText: "123 subscribers" }, videosCountText: { simpleText: "3 videos" }, banner: { thumbnails: [{ url: "https://yt3.ggpht.com/banner=w1000" }] } } }, contents: { twoColumnBrowseResultsRenderer: { tabs: [{ tabRenderer: { selected: true, content } }] } } })};`);
     }
     if (url.pathname.includes("UgMissingPost12345")) return new Response(null, { status: 404 });
     if (url.pathname.includes("UgTransientPost123")) return new Response("Sign in to continue");
@@ -26,6 +42,7 @@ globalThis.fetch = async function(input, options) {
   }
   if (!href.startsWith("https://api.fxtwitter.com/")) return original.call(this, input, options);
   const url = new URL(href);
+  if (url.pathname === "/2/status/20") return Response.json({ status: { id: "20", author: { screen_name: "jack", name: "Jack" }, text: "Public source check" } });
   if (url.pathname === `/2/status/${mixedMedia.id}`) return Response.json({ status: mixedMedia });
   if (url.pathname === `/2/status/${fourVideos.id}`) return Response.json({ status: fourVideos });
   if (url.pathname.includes("TransientUser") || url.pathname.endsWith("/status/999999999999")) return new Response(null, { status: 503 });

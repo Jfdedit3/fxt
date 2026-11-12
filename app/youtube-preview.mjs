@@ -1,3 +1,4 @@
+import { startSeconds, timeQuery, originalAtTime } from "./youtube-time.mjs";
 import { durationLabel } from "./i18n.mjs";
 import { inlineComponent } from "./discord-preview.mjs";
 const escape = value => String(value).replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
@@ -19,10 +20,11 @@ export function youtubeDescription(item) {
   return [item.author, durationLabel(item.duration), item.published, item.views ? `${item.views} views` : "", item.likes ? `${item.likes} likes` : "", item.text].filter(Boolean).join(" · ").slice(0, 300);
 }
 
-export function youtubePreviewHtml(item, origin) {
-  const url = `${origin}/youtube/${item.kind}/${item.id}`;
+export function youtubePreviewHtml(item, origin, start = null) {
+  const seconds = item.kind === "post" ? null : startSeconds(start);
+  const url = `${origin}/youtube/${item.kind}/${item.id}${timeQuery(seconds)}`;
   const inline = youtubeComponent(item);
-  const player = item.videoId && !inline ? `https://www.youtube.com/embed/${item.videoId}` : null;
+  const player = item.videoId && !inline ? `https://www.youtube.com/embed/${item.videoId}${seconds ? `?start=${seconds}` : ""}` : null;
   const meta = (key, value, name = false) => value ? `<meta ${name ? "name" : "property"}="${key}" content="${escape(value)}">` : "";
-  return `<!doctype html><html><head><meta charset="utf-8"><title>${escape(item.title)}</title>${inline ? `<script id="discord:component-embed" type="application/json">${inline}</script>` : ""}${meta("og:title", item.title)}${meta("og:description", youtubeDescription(item))}${meta("og:url", url)}${meta("og:site_name", "YouTube · Fxt")}${meta("og:type", player ? "video.other" : "article")}${item.images.map(image => meta("og:image", image)).join("")}${player ? meta("og:video", player) + meta("og:video:type", "text/html") + meta("og:video:width", "1280") + meta("og:video:height", "720") : ""}${meta("twitter:card", player ? "player" : "summary_large_image", true)}${player ? meta("twitter:player", player, true) + meta("twitter:player:width", "1280", true) + meta("twitter:player:height", "720", true) : ""}${meta("twitter:image", item.images[0], true)}</head><body><a href="${escape(item.originalUrl)}">${escape(item.title)}</a></body></html>`;
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${escape(item.title)}</title>${inline ? `<script id="discord:component-embed" type="application/json">${inline}</script>` : ""}${meta("og:title", item.title)}${meta("og:description", youtubeDescription(item))}${meta("og:url", url)}${meta("og:site_name", "YouTube · Fxt")}${meta("og:type", player ? "video.other" : "article")}${item.images.map(image => meta("og:image", image)).join("")}${player ? meta("og:video", player) + meta("og:video:type", "text/html") + meta("og:video:width", "1280") + meta("og:video:height", "720") : ""}${meta("twitter:card", player ? "player" : "summary_large_image", true)}${player ? meta("twitter:player", player, true) + meta("twitter:player:width", "1280", true) + meta("twitter:player:height", "720", true) : ""}${meta("twitter:image", item.images[0], true)}</head><body><a href="${escape(originalAtTime(item.originalUrl, seconds))}">${escape(item.title)}</a></body></html>`;
 }

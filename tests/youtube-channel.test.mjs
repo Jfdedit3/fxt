@@ -31,3 +31,15 @@ test("missing channels and source challenges retain separate states and invalid 
   assert.equal((await getYouTubeChannel("@Creator", "videos", async () => new Response("Consent"))).state, "unavailable");
   assert.equal((await getYouTubeChannel("@Creator", "videos", async () => new Response(null, { status: 404 }))).state, "not-found");
 });
+
+
+test("legacy channel redirects stay on YouTube channel routes and cannot become arbitrary fetches", async () => {
+  let calls = 0;
+  const result = await getYouTubeChannel("c~Legacy", "videos", async _url => {
+    calls++; return calls === 1 ? new Response(null, { status: 301, headers: { location: "https://www.youtube.com/@Creator/videos" } }) : new Response(html({ richGridRenderer: { contents: [] } }));
+  });
+  assert.equal(result.state, "ready"); assert.equal(calls, 2);
+  calls = 0;
+  const bad = await getYouTubeChannel("user~Legacy", "videos", async () => { calls++; return new Response(null, { status: 302, headers: { location: "https://example.com/internal" } }); });
+  assert.equal(bad.state, "unavailable"); assert.equal(calls, 1);
+});

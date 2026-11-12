@@ -1,9 +1,11 @@
 "use client";
 import { createContext, useContext, useEffect, useState } from "react";
+import { sourceLabel } from "./source-label.mjs";
 import { translate } from "./i18n.mjs";
 const Context = createContext({ language: "en", t: value => value });
 export const useLanguage = () => useContext(Context);
 export function T({ children }) { return useLanguage().t(children); }
+export function SourceLabel({ children }) { const { language } = useLanguage(); return sourceLabel(children, language); }
 export function LocalNumber({ value }) { const { language } = useLanguage(); return new Intl.NumberFormat(language === "fr" ? "fr-FR" : "en-US").format(value); }
 export function LocalDate({ value, options }) {
   const { language } = useLanguage(); const date = new Date(value);

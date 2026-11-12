@@ -214,3 +214,90 @@ test("copy writes a single URL without whitespace or invisible characters to the
   expect(value).not.toMatch(/[\s\u200b-\u200d\ufeff]/);
   await expect(page.getByRole("button", { name: "Copied!" })).toBeVisible();
 });
+
+test("channel pagination appends new items without duplicates and keeps existing cards on failure", async ({ page }) => {
+  await page.goto("/youtube/channel/@FixtureCreator");
+  await expect(page.locator(".channelEntry")).toHaveCount(1);
+  await page.route("**/api/youtube-channel-more", route => route.fulfill({ status: 503, json: { state: "unavailable" } }));
+  await page.getByRole("button", { name: "Load more", exact: true }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "Could not load more" })).toContainText("Could not load more");
+  await expect(page.locator(".channelEntry")).toHaveCount(1);
+  await page.unroute("**/api/youtube-channel-more");
+  await page.getByRole("button", { name: "Load more", exact: true }).click();
+  await expect(page.locator(".channelEntry")).toHaveCount(2);
+  await expect(page.locator(".channelEntry").last()).toContainText("Next channel video");
+  await expect(page.getByRole("button", { name: "Load more", exact: true })).toHaveCount(0);
+});
+
+test("old YouTube links and video timestamps survive browser playback, sharing and Discord previews", async ({ page, request }) => {
+  await page.goto("/"); await page.getByRole("textbox").fill("https://youtu.be/jNQXAC9IVRw?t=1m30s&si=tracking");
+  await page.getByRole("button", { name: "Open link" }).click();
+  await expect(page).toHaveURL(/\/youtube\/watch\/jNQXAC9IVRw\?t=90$/);
+  await expect(page.locator("iframe")).toHaveAttribute("src", /\?start=90$/);
+  const response = await request.get("/watch?v=jNQXAC9IVRw&t=90", { headers: { "User-Agent": "Discordbot/2.0" } });
+  expect(await response.text()).toContain("https://www.youtube.com/embed/jNQXAC9IVRw?start=90");
+  expect((await request.get("/c/LegacyChannel")).status()).toBe(200);
+  expect((await request.get("/user/LegacyName/shorts")).status()).toBe(200);
+});
+
+test("French labels include YouTube counts and relative dates", async ({ page }) => {
+  await page.goto("/youtube/channel/@FixtureCreator");
+  await page.locator("#site-language").selectOption("fr");
+  await expect(page.locator(".channelCounts")).toContainText("123 abonnés");
+  await expect(page.getByRole("button", { name: "Charger la suite" })).toBeVisible();
+});
+
+test("mobile gallery supports swiping, zooming and a graceful fullscreen fallback", async ({ page }) => {
+  await page.goto("/post/UgkxvF-Ikos2vcUfuu-7iS9zo0eW2S7c5RYG");
+  await page.getByRole("button", { name: "Open image 1", exact: true }).click();
+  const viewport = page.locator(".galleryViewport");
+  // Use real active pointer events so capture and gesture tracking match a drag.
+  const box = await viewport.boundingBox();
+  await page.mouse.move(box.x + box.width * .8, box.y + 5); await page.mouse.down();
+  await page.mouse.move(box.x + box.width * .2, box.y + 5, { steps: 4 }); await page.mouse.up();
+  await expect(page.getByRole("dialog").locator("img")).toHaveAttribute("src", /community-2/);
+  await page.getByRole("button", { name: "Zoom in", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Reset zoom" })).toHaveText("150%");
+  await page.getByRole("button", { name: "Reset zoom" }).click();
+  await expect(page.getByRole("button", { name: "Reset zoom" })).toHaveText("100%");
+  await page.getByRole("button", { name: "Fullscreen", exact: true }).click();
+  expect(await page.evaluate(() => Boolean(document.fullscreenElement)) || await page.getByRole("status").count() > 0).toBeTruthy();
+});
+
+test("Discord user and server links open public profiles and restricted users stay honest", async ({ page, request }) => {
+  await page.goto("/"); await page.getByRole("textbox").fill("https://discord.gg/discord-developers");
+  await page.getByRole("button", { name: "Open link" }).click();
+  await expect(page.getByRole("heading", { name: "Public Discord server" })).toBeVisible();
+  await expect(page.locator(".profileStats")).toContainText("1,200");
+  await page.goto("/discord/users/268798547439255572");
+  await expect(page.getByRole("heading", { name: "Public Discord user" })).toBeVisible();
+  await expect(page.locator(".discordPresence")).toHaveText("Online");
+  await page.goto("/discord/users/123456789012345679");
+  await expect(page.getByText("This user’s profile is not available publicly.", { exact: true })).toBeVisible();
+  expect((await request.get("/discord/invite/expired-invite")).status()).toBe(404);
+  expect((await request.get("/users/268798547439255572")).status()).toBe(200);
+});
+
+test("service status checks public sample parsing and exposes a readable dashboard", async ({ page, request }) => {
+  const response = await request.get("/api/health"); expect(response.status()).toBe(200);
+  const health = await response.json(); expect(health.status).toBe("operational"); expect(health.checks).toHaveLength(5);
+  await page.goto("/status");
+  await expect(page.getByText("All checks passed", { exact: true })).toBeVisible();
+  await page.locator("#site-language").selectOption("fr");
+  await expect(page.getByRole("heading", { name: "État des services" })).toBeVisible();
+});
+
+test("two-finger pinch enlarges the gallery image without navigating away", async ({ page }) => {
+  await page.goto("/post/UgkxvF-Ikos2vcUfuu-7iS9zo0eW2S7c5RYG");
+  await page.getByRole("button", { name: "Open image 1", exact: true }).click();
+  const viewport = page.locator(".galleryViewport"); const box = await viewport.boundingBox();
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 2 });
+  const middle = box.x + box.width / 2, y = box.y + Math.min(5, box.height / 2);
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: middle - 30, y, id: 1 }, { x: middle + 30, y, id: 2 }] });
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: middle - 60, y, id: 1 }, { x: middle + 60, y, id: 2 }] });
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await expect(page.getByRole("button", { name: "Reset zoom" })).not.toHaveText("100%");
+  await expect(page.getByRole("dialog").locator("img")).toHaveAttribute("src", /community-1/);
+  await cdp.detach();
+});

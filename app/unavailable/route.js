@@ -1,4 +1,5 @@
 import { validChannelRef, originalChannelUrl, channelTab } from "../youtube-channel-url.mjs";
+import { validDiscordId, validInviteCode } from "../discord-url.mjs";
 import { translate } from "../i18n.mjs";
 import { validYouTubeId, youtubeOriginalUrl } from "../youtube-url.mjs";
 const escape = value => value.replace(/[&<>"']/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
@@ -8,10 +9,13 @@ export function GET(request) {
   try {
     const url = new URL(value, "https://fxt.invalid");
     const channel = /^\/youtube\/channel\/([^/]+)$/.exec(decodeURIComponent(url.pathname));
-    if (url.origin === "https://fxt.invalid" && (channel && validChannelRef(channel[1]) ||/^\/[a-zA-Z0-9_]{1,50}(?:\/status\/\d{1,30}(?:\/player)?)?$/.test(url.pathname) || /^\/youtube\/(post|watch|shorts)\/[A-Za-z0-9_-]{11,102}$/.test(url.pathname))) {
+    const discord = /^\/discord\/(users|invite)\/([^/]+)$/.exec(url.pathname);
+    const validDiscord = discord && (discord[1] === "users" ? validDiscordId(discord[2]) : validInviteCode(discord[2]));
+    if (url.origin === "https://fxt.invalid" && (validDiscord || channel && validChannelRef(channel[1]) ||/^\/[a-zA-Z0-9_]{1,50}(?:\/status\/\d{1,30}(?:\/player)?)?$/.test(url.pathname) || /^\/youtube\/(post|watch|shorts)\/[A-Za-z0-9_-]{11,102}$/.test(url.pathname))) {
       target = url.pathname + url.search;
       const youtube = /^\/youtube\/(post|watch|shorts)\/([^/]+)$/.exec(url.pathname);
-      if (channel) original = originalChannelUrl(channel[1], channelTab(url.searchParams.get("tab")));
+      if (validDiscord) original = discord[1] === "users" ? `https://discord.com/users/${discord[2]}` : `https://discord.gg/${discord[2]}`;
+      else if (channel) original = originalChannelUrl(channel[1], channelTab(url.searchParams.get("tab")));
       else if (youtube && validYouTubeId(youtube[1], youtube[2])) original = youtubeOriginalUrl(youtube[1], youtube[2]);
       else if (!youtube) original = `https://x.com${url.pathname}`;
     }

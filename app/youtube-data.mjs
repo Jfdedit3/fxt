@@ -77,11 +77,11 @@ export function parseYouTubeHtml(html, kind, id) {
   return { state: "ready", item: { kind, id, title: text(video.title), text: text(video.shortDescription), author: text(video.author), published: text(player?.microformat?.playerMicroformatRenderer?.publishDate) || text(player?.microformat?.playerMicroformatRenderer?.uploadDate), likes, channelId: /^UC[A-Za-z0-9_-]{22}$/.test(video.channelId) ? video.channelId : null, views: /^\d+$/.test(String(video.viewCount)) ? String(video.viewCount) : null, duration: /^\d+$/.test(String(video.lengthSeconds)) ? Number(video.lengthSeconds) : null, images: [thumbnail(video.thumbnail)].filter(Boolean), videoId: id, originalUrl: youtubeOriginalUrl(kind, id) } };
 }
 
-async function limitedText(response) {
+async function limitedText(response, maxBytes = 4 * 1024 * 1024) {
   const reader = response.body?.getReader(); if (!reader) throw Error("Missing body");
   const chunks = []; let length = 0;
   try {
-    while (true) { const { value, done } = await reader.read(); if (done) break; length += value.byteLength; if (length > 4 * 1024 * 1024) throw Error("YouTube response too large"); chunks.push(value); }
+    while (true) { const { value, done } = await reader.read(); if (done) break; length += value.byteLength; if (length > maxBytes) throw Error("YouTube response too large"); chunks.push(value); }
   } finally { await reader.cancel().catch(() => {}); }
   return Buffer.concat(chunks).toString("utf8");
 }
