@@ -1,4 +1,5 @@
-import ImageGallery from "../../../ImageGallery";
+import PostGallery from "../../../PostGallery";
+import { postMosaicPlan, mosaicUrl } from "../../../post-mosaic-plan.mjs";
 import ShareButton from "../../../ShareButton";
 import PreviewStatus from "../../../PreviewStatus";
 import { T, LocalDate } from "../../../Language";
@@ -92,6 +93,8 @@ export default async function PostPage({ params }) {
   const author = post.author || post.user || {};
   const date = post.created_at || post.date;
   const media = mediaOf(post);
+  const panelPlan = postMosaicPlan(post);
+  const panels = panelPlan ? panelPlan.groups.map((group, index) => ({ url: mosaicUrl(post, "", index + 1), alt: `Images ${group.first}–${group.last} / ${panelPlan.total}` })) : [];
   const images = media.filter(item => !isVideo(item)).map(item => ({ url: safeExternalUrl(mediaUrl(item)), alt: typeof item.altText === "string" ? item.altText : "" })).filter(item => item.url);
 
   return (
@@ -127,7 +130,7 @@ export default async function PostPage({ params }) {
           }
           return null;
         })}
-        <ImageGallery images={images} />
+        <PostGallery key={post.id} images={images} panels={panels} />
         <PostDetails post={post} />
         {date && <p className="timestamp"><LocalDate value={date} options={{ dateStyle: "medium", timeStyle: "short" }} /> UTC</p>}
         <PostStatistics post={post} />

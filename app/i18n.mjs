@@ -1,4 +1,5 @@
 export const fr = {
+  "Gallery mode": "Mode de galerie", "Individual images": "Images individuelles", "Panels (4 images)": "Panneaux (4 images)",
   "Load more": "Charger la suite",
   "Loading…": "Chargement…",
   "This page expired. Refresh to continue.": "Cette page a expiré. Actualisez pour continuer.",

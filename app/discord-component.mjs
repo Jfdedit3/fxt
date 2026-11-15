@@ -34,7 +34,8 @@ export function buildDiscordComponent(post, origin) {
   const text = Array.from([postText(post), plan ? `${plan.total} images` : ""].filter(Boolean).join("\n"));
   let textLength = Math.min(600, text.length);
   const body = { type: 10, content: plain(text.slice(0, textLength).join(""), textLength) };
-  const galleries = plan ? items.map(item => ({ type: 12, items: [item] })) : [{ type: 12, items }];
+  // Keep every panel in the same gallery so clients can navigate them as one album.
+  const galleries = [{ type: 12, items }];
   const footer = { type: 1, components: [{ type: 2, style: 5, url: `${origin}/${handle}/status/${post.id}`, label: plan ? `View all ${plan.total} images` : "Open post" }] };
   const payload = { component: { type: 17, accent_color: 10980346, components: [header, ...(body.content ? [body] : []), ...galleries, footer] } };
   if (componentBytes(payload) > DISCORD_COMPONENT_MAX_BYTES) for (const item of items) delete item.description;

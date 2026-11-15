@@ -53,3 +53,6 @@ button:disabled { opacity:.55; cursor:default; }
 .eyebrow { max-width:100%; line-height:1.5; }
 .pulse { flex-shrink:0; }
 footer { flex-wrap:wrap; gap:14px; }
+.galleryModes { display:flex; flex-wrap:wrap; gap:8px; margin:16px 0; }
+.galleryModes button { border:1px solid var(--line); color:var(--text); background:#151624; border-radius:10px; padding:10px 14px; cursor:pointer; }
+.galleryModes button[aria-pressed=true] { border-color:var(--cyan); color:var(--cyan); }

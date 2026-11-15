@@ -8,16 +8,16 @@ import { renderPostMosaic, cachedPostMosaic, mosaicLayout } from "../app/post-mo
 const photos = count => Array.from({ length: count }, (_value, index) => ({ type: "photo", url: `https://pbs.twimg.com/media/image-${index + 1}.jpg?name=orig` }));
 const post = count => ({ id: "2121376693227294813", author: { screen_name: "TakhiAI", name: "Author" }, text: "An album", media: { all: photos(count) } });
 
-test("one original post URL describes every photo in large paired panels for 12 and 20 images", () => {
+test("one original post URL describes every photo in four-photo panels in one gallery for 12 and 20 images", () => {
   for (const count of [12, 20]) {
-    const album = post(count), plan = postMosaicPlan(album); assert.equal(plan.total, count); assert.equal(plan.groups.length, count / 2);
+    const album = post(count), plan = postMosaicPlan(album); assert.equal(plan.total, count); assert.equal(plan.groups.length, count / 4);
     assert.deepEqual(plan.groups.flatMap(group => group.items.map(item => item.url)), photos(count).map(item => item.url));
     const payload = buildDiscordComponent(album, "https://fxt.example");
     const galleries = payload.component.components.filter(component => component.type === 12);
-    assert.equal(galleries.length, count / 2); assert.equal(galleries.flatMap(gallery => gallery.items).length, count / 2);
+    assert.equal(galleries.length, 1); assert.equal(galleries.flatMap(gallery => gallery.items).length, count / 4);
     assert.ok(componentBytes(payload) <= 3000);
-    assert.deepEqual(galleries.map(gallery => gallery.items[0].media.url), Array.from({ length: count / 2 }, (_v, i) => i + 1).map(page => `https://fxt.example/api/post-mosaic/TakhiAI/2121376693227294813/${page}-v2.jpg`));
-    assert.ok(discordPreviewHtml(album, "https://fxt.example").includes('property="og:image" content="https://fxt.example/api/post-mosaic/TakhiAI/2121376693227294813/1-v2.jpg"'));
+    assert.deepEqual(galleries.flatMap(gallery => gallery.items.map(item => item.media.url)), Array.from({ length: count / 4 }, (_v, i) => i + 1).map(page => `https://fxt.example/api/post-mosaic/TakhiAI/2121376693227294813/${page}-v3.jpg`));
+    assert.ok(discordPreviewHtml(album, "https://fxt.example").includes('property="og:image" content="https://fxt.example/api/post-mosaic/TakhiAI/2121376693227294813/1-v3.jpg"'));
   }
   assert.equal(postMosaicPlan(post(10)), null);
 });
@@ -32,11 +32,11 @@ test("mosaic generation contains every source tile in order and returns a real J
     const index = Number(/image-(\d+)/.exec(url)[1]) - 1;
     return new Response(sources[index], { headers: { "Content-Type": "image/jpeg" } });
   });
-  assert.equal(requests.length, 2); assert.equal((await sharp(result).metadata()).format, "jpeg");
+  assert.equal(requests.length, 4); assert.equal((await sharp(result).metadata()).format, "jpeg");
   const { data, info } = await sharp(result).raw().toBuffer({ resolveWithObject: true });
-  assert.equal(info.width, mosaicLayout(2).width);
-  for (let index = 0; index < 2; index++) {
-    const x = 8 + index * 648 + 320, y = 8 + 320;
+  assert.equal(info.width, mosaicLayout(4).width);
+  for (let index = 0; index < 4; index++) {
+    const x = 8 + index % 2 * 648 + 320, y = 8 + Math.floor(index / 2) * 674 + 320;
     const pixel = (y * info.width + x) * info.channels;
     for (let channel = 0; channel < 3; channel++) assert.ok(Math.abs(data[pixel + channel] - colors[index][channel]) < 25, `tile ${index + 1}, channel ${channel}`);
   }
@@ -55,8 +55,11 @@ test("portrait pairs use a taller uncropped layout and older mosaic URLs retain 
   const layout = mosaicLayout(2, [{ width: 600, height: 900 }, { width: 600, height: 900 }]);
   assert.equal(layout.tileWidth, 640); assert.equal(layout.tileHeight, 960); assert.equal(layout.columns, 2);
   assert.equal(postMosaicPlan(post(20), { legacy: true }).groups.length, 2);
-  assert.equal(postMosaicPlan(post(11)).groups.at(-1).items.length, 1);
+  assert.equal(postMosaicPlan(post(11)).groups.at(-1).items.length, 3);
+  assert.deepEqual(postMosaicPlan(post(13)).groups.map(group => group.items.length), [4,4,4,1]);
   const oversizedText = { ...post(20), text: "😀".repeat(5000) };
   const payload = buildDiscordComponent(oversizedText, "https://fxt.example");
-  assert.ok(payload); assert.ok(componentBytes(payload) <= 3000); assert.equal(payload.component.components.filter(c => c.type === 12).length, 10);
+  assert.ok(payload); assert.ok(componentBytes(payload) <= 3000); assert.equal(payload.component.components.filter(c => c.type === 12).length, 1);
+  assert.equal(payload.component.components.find(c => c.type === 12).items.length, 5);
+  assert.equal(postMosaicPlan(post(12), { version: 2 }).groups.length, 6);
 });

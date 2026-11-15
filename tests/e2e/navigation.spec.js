@@ -301,21 +301,39 @@ test("Discord account/server integration is removed while X and YouTube previews
 });
 
 
-test("one ordinary post link exposes all twelve photos through large paired panels", async ({ page, request }) => {
+test("one ordinary post link exposes all twelve photos through one navigable gallery of four-photo panels", async ({ page, request }) => {
   const path = "/TakhiAI/status/2121376693227294813";
   const response = await request.get(path, { headers: { "User-Agent": "Discordbot/2.0" } });
   expect(response.status()).toBe(200);
   const html = await response.text();
   const raw = html.match(/<script id="discord:component-embed" type="application\/json">([\s\S]*?)<\/script>/)[1];
   const galleries = JSON.parse(raw).component.components.filter(component => component.type === 12);
-  expect(galleries).toHaveLength(6);
-  for (const gallery of galleries) {
-    expect(gallery.items).toHaveLength(1);
-    const image = await request.get(gallery.items[0].media.url);
+  expect(galleries).toHaveLength(1);
+  expect(galleries[0].items).toHaveLength(3);
+  for (const item of galleries[0].items) {
+    const image = await request.get(item.media.url);
     expect(image.status()).toBe(200); expect(image.headers()["content-type"]).toBe("image/jpeg");
     const bytes = await image.body(); expect(bytes.subarray(0, 2)).toEqual(Buffer.from([255,216]));
   }
   await page.goto(path); await expect(page.locator(".galleryThumbnail")).toHaveCount(12);
   expect((await request.get("/api/post-mosaic/TakhiAI/2121376693227294813/3.jpg")).status()).toBe(404);
   expect((await request.get("/api/post-mosaic/TakhiAI/2121376693227294813/0.jpg")).status()).toBe(404);
+});
+
+
+test("four-image panels slide in the website viewer without returning to the post", async ({ page }) => {
+  await page.goto("/TakhiAI/status/2121376693227294813");
+  await page.getByRole("button", { name: "Panels (4 images)" }).click();
+  await expect(page.locator(".galleryThumbnail")).toHaveCount(3);
+  await page.getByRole("button", { name: "Open image 1", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.locator("img")).toHaveAttribute("src", /1-v3\.jpg$/);
+  const box = await page.locator(".galleryViewport").boundingBox();
+  await page.mouse.move(box.x + box.width * .8, box.y + 5); await page.mouse.down();
+  await page.mouse.move(box.x + box.width * .2, box.y + 5, { steps: 4 }); await page.mouse.up();
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator("img")).toHaveAttribute("src", /2-v3\.jpg$/);
+  await page.getByRole("button", { name: "Next image" }).click();
+  await expect(dialog.locator("img")).toHaveAttribute("src", /3-v3\.jpg$/);
+  await expect(page).toHaveURL(/TakhiAI\/status\/2121376693227294813$/);
 });
