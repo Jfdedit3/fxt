@@ -7,8 +7,11 @@ export const maxDuration = 15;
 
 export async function GET(request) {
   const url = new URL(request.url);
-  const username = url.searchParams.get("username");
-  const id = url.searchParams.get("id");
+  // Some reverse-proxy rewrites preserve the original request URL. Resolve
+  // its path first so the ordinary share link never needs helper parameters.
+  const path = /^\/([a-zA-Z0-9_]{1,50})\/status\/(\d{1,30})\/?$/.exec(url.pathname);
+  const username = path?.[1] || url.searchParams.get("username");
+  const id = path?.[2] || url.searchParams.get("id");
   // The response varies by crawler identity at the original post URL. Prevent
   // intermediary caches from serving crawler HTML to people or vice versa.
   const headers = { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "private, no-store", "Vary": "User-Agent", "X-Content-Type-Options": "nosniff" };

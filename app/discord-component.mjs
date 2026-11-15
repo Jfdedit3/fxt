@@ -1,3 +1,4 @@
+import { postMosaicPlan, mosaicUrl } from "./post-mosaic-plan.mjs";
 import { mediaOf, mediaUrl } from "./post-media.mjs";
 import { postText, profilePath, safeExternalUrl, textValue } from "./post-info.mjs";
 
@@ -12,8 +13,10 @@ export function componentBytes(payload) {
   return Buffer.byteLength(JSON.stringify(payload), "utf8");
 }
 
-function galleryItems(post) {
-  return mediaOf(post).flatMap(item => {
+function galleryItems(post, origin) {
+  const plan = origin ? postMosaicPlan(post) : null;
+  const input = plan ? [...plan.groups.map((_group, index) => ({ url: mosaicUrl(post, origin, index + 1), altText: `Images ${plan.groups[index].first}–${plan.groups[index].last} / ${plan.total}` })), ...mediaOf(post).filter(item => !plan.photos.some(photo => mediaUrl(photo) === mediaUrl(item)))] : mediaOf(post);
+  return input.flatMap(item => {
     const url = safeExternalUrl(mediaUrl(item));
     if (!url || url.length > 2048 || !/\.(mp4|webm|mov|png|gif|jpg|jpeg|webp|avif)$/i.test(new URL(url).pathname)) return [];
     const description = textValue(item.altText);
@@ -24,15 +27,16 @@ function galleryItems(post) {
 export function buildDiscordComponent(post, origin) {
   const handle = textValue(post?.author?.screen_name);
   if (!profilePath(handle) || !/^\d{1,30}$/.test(String(post?.id ?? ""))) return null;
-  const items = galleryItems(post);
+  const items = galleryItems(post, origin);
   if (!items.length) return null;
   const header = { type: 10, content: `**${plain(post.author.name || handle, 60)}** (@\u200b${plain(handle, 50)})` };
-  const text = Array.from(postText(post));
+  const plan = postMosaicPlan(post);
+  const text = Array.from([postText(post), plan ? `${plan.total} images · ${plan.groups.length} mosaics. Open post for individual images.` : ""].filter(Boolean).join("\n"));
   let textLength = Math.min(600, text.length);
   const body = { type: 10, content: plain(text.slice(0, textLength).join(""), textLength) };
-  const gallery = { type: 12, items };
+  const galleries = plan ? items.map(item => ({ type: 12, items: [item] })) : [{ type: 12, items }];
   const footer = { type: 1, components: [{ type: 2, style: 5, url: `${origin}/${handle}/status/${post.id}`, label: "Open post" }] };
-  const payload = { component: { type: 17, accent_color: 10980346, components: [header, ...(body.content ? [body] : []), gallery, footer] } };
+  const payload = { component: { type: 17, accent_color: 10980346, components: [header, ...(body.content ? [body] : []), ...galleries, footer] } };
   if (componentBytes(payload) > DISCORD_COMPONENT_MAX_BYTES) for (const item of items) delete item.description;
   while (componentBytes(payload) > DISCORD_COMPONENT_MAX_BYTES && textLength > 0) {
     textLength = Math.max(0, textLength - 24);

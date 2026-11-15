@@ -1,3 +1,4 @@
+import { postMosaicPlan, mosaicUrl } from "./post-mosaic-plan.mjs";
 import { buildDiscordComponent, hasMultipleMedia } from "./discord-component.mjs";
 import { metadataDescription, textValue } from "./post-info.mjs";
 import { previewImage, previewVideo } from "./post-media.mjs";
@@ -19,7 +20,8 @@ export function discordPreviewHtml(post, origin) {
   // A gallery must not simultaneously advertise a standalone Twitter player.
   // Older clients retain the album image and the link to the full post.
   const video = inline ? null : previewVideo(post);
-  const image = previewImage(post);
+  const plan = postMosaicPlan(post);
+  const image = plan ? mosaicUrl(post, origin, 1) : previewImage(post);
   const meta = (property, content, name = false) => content == null ? "" : `<meta ${name ? "name" : "property"}="${property}" content="${escape(content)}">`;
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${escape(title)}</title>${inline ? `<script id="discord:component-embed" type="application/json">${inline}</script>` : ""}${meta("og:title", title)}${meta("og:description", description)}${meta("og:url", url)}${meta("og:site_name", "Fxt")}${meta("og:type", video ? "video.other" : "article")}${meta("og:image", image)}${video ? meta("og:video", video.url) + meta("og:video:secure_url", video.url) + meta("og:video:type", video.type) + meta("og:video:width", video.width) + meta("og:video:height", video.height) : ""}${meta("twitter:card", video ? "player" : image ? "summary_large_image" : "summary", true)}${meta("twitter:title", title, true)}${meta("twitter:description", description, true)}${meta("twitter:image", image, true)}${video ? meta("twitter:player", `${url}/player`, true) + meta("twitter:player:stream", video.url, true) + meta("twitter:player:stream:content_type", video.type, true) + meta("twitter:player:width", video.width, true) + meta("twitter:player:height", video.height, true) : ""}<link rel="canonical" href="${escape(url)}"></head><body><a href="${escape(url)}">${escape(title)}</a><p>${escape(description)}</p></body></html>`;
 }

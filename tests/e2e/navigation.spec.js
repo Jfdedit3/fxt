@@ -299,3 +299,23 @@ test("Discord account/server integration is removed while X and YouTube previews
   const post = await request.get("/GodoffuryN/status/2120247287821529191", { headers: { "User-Agent": "Discordbot/2.0" } });
   expect(await post.text()).toContain('id="discord:component-embed"');
 });
+
+
+test("one ordinary post link exposes all twelve photos through two mosaic panels", async ({ page, request }) => {
+  const path = "/TakhiAI/status/2121376693227294813";
+  const response = await request.get(path, { headers: { "User-Agent": "Discordbot/2.0" } });
+  expect(response.status()).toBe(200);
+  const html = await response.text();
+  const raw = html.match(/<script id="discord:component-embed" type="application\/json">([\s\S]*?)<\/script>/)[1];
+  const galleries = JSON.parse(raw).component.components.filter(component => component.type === 12);
+  expect(galleries).toHaveLength(2);
+  for (const gallery of galleries) {
+    expect(gallery.items).toHaveLength(1);
+    const image = await request.get(gallery.items[0].media.url);
+    expect(image.status()).toBe(200); expect(image.headers()["content-type"]).toBe("image/jpeg");
+    const bytes = await image.body(); expect(bytes.subarray(0, 2)).toEqual(Buffer.from([255,216]));
+  }
+  await page.goto(path); await expect(page.locator(".galleryThumbnail")).toHaveCount(12);
+  expect((await request.get("/api/post-mosaic/TakhiAI/2121376693227294813/3.jpg")).status()).toBe(404);
+  expect((await request.get("/api/post-mosaic/TakhiAI/2121376693227294813/0.jpg")).status()).toBe(404);
+});

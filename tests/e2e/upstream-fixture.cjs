@@ -1,3 +1,4 @@
+const sharp = require("sharp");
 const original = globalThis.fetch;
 const author = { id: "123456", screen_name: "HoldingNuts_3D", name: "HoldingNuts", description: "Public profile regression fixture", followers: 100, statuses: 3 };
 const photo = { id: "2111273616495333805", author, text: "A public post", media: { photos: [{ type: "photo", url: "https://pbs.twimg.com/fixture.jpg" }] } };
@@ -9,6 +10,10 @@ const mixedMedia = { id: "1874143352154968122", author: { ...author, screen_name
 
 globalThis.fetch = async function(input, options) {
   const href = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+  if (/^https:\/\/pbs\.twimg\.com\/media\/mosaic-fixture-\d+\.jpg/.test(href)) {
+    const image = await sharp({ create: { width: 32, height: 32, channels: 3, background: "#70e1f5" } }).jpeg().toBuffer();
+    return new Response(image, { headers: { "Content-Type": "image/jpeg" } });
+  }
   if (href === "https://yt3.ggpht.com/community-1=s640") return new Response(new Uint8Array([137, 80, 78, 71]), { headers: { "Content-Type": "image/png" } });
   if (href.startsWith("https://www.youtube.com/")) {
     const url = new URL(href);
@@ -33,6 +38,7 @@ globalThis.fetch = async function(input, options) {
   }
   if (!href.startsWith("https://api.fxtwitter.com/")) return original.call(this, input, options);
   const url = new URL(href);
+  if (url.pathname === "/2/status/2121376693227294813") return Response.json({ status: { id: "2121376693227294813", author: { ...author, screen_name: "TakhiAI" }, text: "Twelve photo fixture", media: { all: Array.from({ length: 12 }, (_value, index) => ({ type: "photo", url: `https://pbs.twimg.com/media/mosaic-fixture-${index + 1}.jpg?name=orig` })) } } });
   if (url.pathname === "/2/status/20") return Response.json({ status: { id: "20", author: { screen_name: "jack", name: "Jack" }, text: "Public source check" } });
   if (url.pathname === `/2/status/${mixedMedia.id}`) return Response.json({ status: mixedMedia });
   if (url.pathname === `/2/status/${fourVideos.id}`) return Response.json({ status: fourVideos });
