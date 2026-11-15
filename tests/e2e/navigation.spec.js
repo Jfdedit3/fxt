@@ -301,14 +301,14 @@ test("Discord account/server integration is removed while X and YouTube previews
 });
 
 
-test("one ordinary post link exposes all twelve photos through two mosaic panels", async ({ page, request }) => {
+test("one ordinary post link exposes all twelve photos through large paired panels", async ({ page, request }) => {
   const path = "/TakhiAI/status/2121376693227294813";
   const response = await request.get(path, { headers: { "User-Agent": "Discordbot/2.0" } });
   expect(response.status()).toBe(200);
   const html = await response.text();
   const raw = html.match(/<script id="discord:component-embed" type="application\/json">([\s\S]*?)<\/script>/)[1];
   const galleries = JSON.parse(raw).component.components.filter(component => component.type === 12);
-  expect(galleries).toHaveLength(2);
+  expect(galleries).toHaveLength(6);
   for (const gallery of galleries) {
     expect(gallery.items).toHaveLength(1);
     const image = await request.get(gallery.items[0].media.url);

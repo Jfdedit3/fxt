@@ -31,11 +31,11 @@ export function buildDiscordComponent(post, origin) {
   if (!items.length) return null;
   const header = { type: 10, content: `**${plain(post.author.name || handle, 60)}** (@\u200b${plain(handle, 50)})` };
   const plan = postMosaicPlan(post);
-  const text = Array.from([postText(post), plan ? `${plan.total} images · ${plan.groups.length} mosaics. Open post for individual images.` : ""].filter(Boolean).join("\n"));
+  const text = Array.from([postText(post), plan ? `${plan.total} images` : ""].filter(Boolean).join("\n"));
   let textLength = Math.min(600, text.length);
   const body = { type: 10, content: plain(text.slice(0, textLength).join(""), textLength) };
   const galleries = plan ? items.map(item => ({ type: 12, items: [item] })) : [{ type: 12, items }];
-  const footer = { type: 1, components: [{ type: 2, style: 5, url: `${origin}/${handle}/status/${post.id}`, label: "Open post" }] };
+  const footer = { type: 1, components: [{ type: 2, style: 5, url: `${origin}/${handle}/status/${post.id}`, label: plan ? `View all ${plan.total} images` : "Open post" }] };
   const payload = { component: { type: 17, accent_color: 10980346, components: [header, ...(body.content ? [body] : []), ...galleries, footer] } };
   if (componentBytes(payload) > DISCORD_COMPONENT_MAX_BYTES) for (const item of items) delete item.description;
   while (componentBytes(payload) > DISCORD_COMPONENT_MAX_BYTES && textLength > 0) {
