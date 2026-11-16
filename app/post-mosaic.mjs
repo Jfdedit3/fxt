@@ -18,7 +18,7 @@ async function imageBytes(response, signal) {
   finally { await reader.cancel().catch(() => {}); }
   return Buffer.concat(chunks);
 }
-export async function renderPostMosaic(group, total, fetcher = fetch, signal = AbortSignal.timeout(6000), { legacy = false } = {}) {
+export async function renderPostMosaic(group, total, fetcher = fetch, signal = AbortSignal.timeout(6000), { legacy = false, resolveSource = mosaicSource, sourceHeaders = {} } = {}) {
   if (!group?.items?.length || group.items.length > 20) throw Error("Invalid mosaic group");
   const controller = new AbortController(); signal = AbortSignal.any([signal, controller.signal]);
   const layout = mosaicLayout(group.items.length, group.items, legacy), tiles = new Array(group.items.length); let next = 0;
@@ -26,8 +26,8 @@ export async function renderPostMosaic(group, total, fetcher = fetch, signal = A
   async function worker() {
     while (next < group.items.length) {
       const index = next++; signal.throwIfAborted();
-      const url = mosaicSource(mediaUrl(group.items[index])); if (!url) throw Error("Invalid image source");
-      const response = await fetcher(url, { redirect: "error", signal, cache: "no-store", headers: { "Accept-Encoding": "identity" } });
+      const url = resolveSource(mediaUrl(group.items[index])); if (!url) throw Error("Invalid image source");
+      const response = await fetcher(url, { redirect: "error", signal, cache: "no-store", headers: { "Accept-Encoding": "identity", ...sourceHeaders } });
       const buffer = await imageBytes(response, signal);
       const tile = await sharp(buffer, { limitInputPixels: 4000000, animated: false, failOn: "error" }).rotate().resize(tileWidth, tileHeight, { fit: "contain", background: "#10111b", withoutEnlargement: false }).jpeg({ quality: 86 }).toBuffer();
       tiles[index] = { input: tile, left: gap + index % layout.columns * (tileWidth + gap), top: header + gap + Math.floor(index / layout.columns) * (tileHeight + label + gap) };

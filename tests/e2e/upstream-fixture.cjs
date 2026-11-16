@@ -15,6 +15,17 @@ globalThis.fetch = async function(input, options) {
     return new Response(image, { headers: { "Content-Type": "image/jpeg" } });
   }
   if (href === "https://yt3.ggpht.com/community-1=s640") return new Response(new Uint8Array([137, 80, 78, 71]), { headers: { "Content-Type": "image/png" } });
+  if (href.startsWith("https://www.pixiv.net/ajax/")) {
+    const url = new URL(href);
+    if (url.pathname.includes("99999999999")) return new Response(null, { status: 404 });
+    if (url.pathname.includes("88888888888")) return new Response(null, { status: 503 });
+    if (url.pathname.includes("/illust/") && url.pathname.endsWith("/pages")) return Response.json({ error: false, body: Array.from({ length: 12 }, (_value, index) => ({ urls: { regular: `https://i.pximg.net/img-master/img/2023/07/02/17/06/08/109546448_p${index}_master1200.jpg`, original: `https://i.pximg.net/img-original/img/2023/07/02/17/06/08/109546448_p${index}.jpg` }, width: 800, height: 1200 })) });
+    if (url.pathname.includes("/illust/")) return Response.json({ error: false, body: { illustId: "109546448", illustTitle: "Pixiv gallery fixture", userId: "69634878", userName: "Pixiv artist", pageCount: 12, description: "A public illustration", createDate: "2023-07-02T08:06:08Z", tags: { tags: [{ tag: "illustration" }] } } });
+    if (url.pathname.endsWith("/profile/all")) return Response.json({ error: false, body: { illusts: { "109546448": null }, manga: {} } });
+    if (url.pathname.includes("/user/")) return Response.json({ error: false, body: { userId: "69634878", name: "Pixiv artist", comment: "Artist profile", imageBig: "https://i.pximg.net/user-profile/img/avatar.jpg" } });
+  }
+  if (href.startsWith("https://www.phixiv.net/api/")) return new Response(null, { status: 503 });
+  if (href.startsWith("https://i.pximg.net/")) { const image = await sharp({ create: { width: 32, height: 32, channels: 3, background: "#70e1f5" } }).jpeg().toBuffer(); return new Response(image, { headers: { "Content-Type": "image/jpeg" } }); }
   if (href.startsWith("https://www.youtube.com/")) {
     const url = new URL(href);
     if (url.pathname === "/youtubei/v1/browse") {

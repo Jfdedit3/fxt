@@ -3,6 +3,8 @@ import { channelPath } from "./app/youtube-channel-url.mjs";
 import { NextResponse } from "next/server";
 
 export function middleware(request) {
+  const pixivAlias = /^\/(?:en\/|fr\/|ja\/)?(artworks|users)\/(\d+)\/?$/.exec(request.nextUrl.pathname);
+  if (pixivAlias) return NextResponse.redirect(new URL(`/pixiv/${pixivAlias[1]}/${pixivAlias[2]}`, request.url));
   const legacy = /^\/(c|user)\/([^/]+)(?:\/(videos|shorts|posts|community|about|featured))?\/?$/.exec(request.nextUrl.pathname);
   if (legacy) {
     let path; try { path = channelPath(`${legacy[1]}~${decodeURIComponent(legacy[2])}`, legacy[3] === "community" ? "posts" : legacy[3]); } catch { path = null; }
@@ -15,6 +17,8 @@ export function middleware(request) {
     return NextResponse.redirect(target);
   }
   if (!/Discordbot\//i.test(request.headers.get("user-agent") || "")) return NextResponse.next();
+  const pixiv = /^\/pixiv\/artworks\/(\d+)\/?$/.exec(request.nextUrl.pathname);
+  if (pixiv) { const target = request.nextUrl.clone(); target.pathname = "/api/pixiv-preview"; target.search = ""; target.searchParams.set("id", pixiv[1]); return NextResponse.rewrite(target); }
   const youtube = /^\/youtube\/(post|watch|shorts)\/([A-Za-z0-9_-]+)\/?$/.exec(request.nextUrl.pathname);
   if (youtube) {
     const target = request.nextUrl.clone(); target.pathname = "/api/youtube-preview"; target.search = "";
@@ -33,4 +37,4 @@ export function middleware(request) {
   return NextResponse.rewrite(target);
 }
 
-export const config = { matcher: ["/:username/status/:id", "/youtube/:kind/:id", "/:handle", "/:handle/:tab", "/c/:name/:tab", "/user/:name/:tab"] };
+export const config = { matcher: ["/:username/status/:id", "/youtube/:kind/:id", "/:handle", "/:handle/:tab", "/c/:name/:tab", "/user/:name/:tab", "/pixiv/artworks/:id", "/:locale/artworks/:id", "/:locale/users/:id"] };

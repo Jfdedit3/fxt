@@ -1,4 +1,17 @@
 export const fr = {
+  "View on Pixiv ↗": "Voir sur Pixiv ↗",
+  "Artwork": "Illustration",
+  "Only the images available from the public source are shown.": "Seules les images disponibles auprès de la source publique sont affichées.",
+  "Open Pixiv to play this animation.": "Ouvrez Pixiv pour lire cette animation.",
+  "Preview images provided by Phixiv. Open Pixiv for original quality.": "Aperçus fournis par Phixiv. Ouvrez Pixiv pour la qualité originale.",
+  "Pixiv limits access to this profile. Available public information is shown.": "Pixiv limite l’accès à ce profil. Les informations publiques disponibles sont affichées.",
+  "Enter an X/Twitter, YouTube or Pixiv link.": "Saisissez un lien X/Twitter, YouTube ou Pixiv.",
+  "X, YouTube or Pixiv URL": "Lien X, YouTube ou Pixiv",
+  "Paste an X, YouTube or Pixiv link": "Collez un lien X, YouTube ou Pixiv",
+  "A BETTER WAY TO SHARE X, YOUTUBE & PIXIV": "PARTAGEZ X, YOUTUBE ET PIXIV SIMPLEMENT",
+  "Cleaner previews for X/Twitter, YouTube and Pixiv. Paste a public link to get a shareable Fxt link.": "De meilleurs aperçus pour X/Twitter, YouTube et Pixiv. Collez un lien public pour obtenir un lien Fxt à partager.",
+  "Pixiv artwork": "Illustration Pixiv",
+
   "Gallery mode": "Mode de galerie", "Individual images": "Images individuelles", "Panels (4 images)": "Panneaux (4 images)",
   "Load more": "Charger la suite",
   "Loading…": "Chargement…",

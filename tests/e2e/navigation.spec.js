@@ -266,7 +266,7 @@ test("mobile gallery supports swiping, zooming and a graceful fullscreen fallbac
 
 test("service status checks public sample parsing and exposes a readable dashboard", async ({ page, request }) => {
   const response = await request.get("/api/health"); expect(response.status()).toBe(200);
-  const health = await response.json(); expect(health.status).toBe("operational"); expect(health.checks).toHaveLength(4);
+  const health = await response.json(); expect(health.status).toBe("operational"); expect(health.checks).toHaveLength(5);
   await page.goto("/status");
   await expect(page.getByText("All checks passed", { exact: true })).toBeVisible();
   await page.locator("#site-language").selectOption("fr");
@@ -336,4 +336,28 @@ test("four-image panels slide in the website viewer without returning to the pos
   await page.getByRole("button", { name: "Next image" }).click();
   await expect(dialog.locator("img")).toHaveAttribute("src", /3-v3\.jpg$/);
   await expect(page).toHaveURL(/TakhiAI\/status\/2121376693227294813$/);
+});
+
+
+test("Pixiv artwork links open all images, link to the artist and provide grouped Discord previews", async ({ page, request }) => {
+  await page.goto("/"); await page.getByRole("textbox").fill("https://www.pixiv.net/en/artworks/109546448");
+  await page.getByRole("button", { name: "Open link" }).click();
+  await expect(page.getByRole("heading", { name: "Pixiv gallery fixture" })).toBeVisible();
+  await expect(page.locator(".galleryThumbnail")).toHaveCount(12);
+  const response = await request.get("/pixiv/artworks/109546448", { headers: { "User-Agent": "Discordbot/2.0" } });
+  expect(response.status()).toBe(200);
+  const html = await response.text(), raw = html.match(/<script id="discord:component-embed" type="application\/json">([\s\S]*?)<\/script>/)[1];
+  const gallery = JSON.parse(raw).component.components.find(c => c.type === 12); expect(gallery.items).toHaveLength(3);
+  const panel = await request.get(gallery.items[0].media.url); expect(panel.status()).toBe(200); expect(panel.headers()["content-type"]).toBe("image/jpeg");
+  await page.locator(".youtubeAuthor").click(); await expect(page.getByRole("heading", { name: "Pixiv artist" })).toBeVisible();
+  await page.locator(".channelEntry a").click(); await expect(page.getByRole("heading", { name: "Pixiv gallery fixture" })).toBeVisible();
+});
+
+test("Pixiv image relays return inline previews, downloadable files and genuine source errors", async ({ request }) => {
+  const url = "https://i.pximg.net/img-master/img/2023/07/02/17/06/08/109546448_p0_master1200.jpg";
+  const image = await request.get("/api/pixiv-image?url=" + encodeURIComponent(url)); expect(image.status()).toBe(200); expect(image.headers()["content-disposition"]).toBeUndefined();
+  const download = await request.get("/api/pixiv-image?url=" + encodeURIComponent(url) + "&download=1"); expect(download.headers()["content-disposition"]).toContain("attachment");
+  expect((await request.get("/artworks/109546448")).status()).toBe(200);
+  expect((await request.get("/pixiv/artworks/99999999999")).status()).toBe(404);
+  expect((await request.get("/pixiv/artworks/88888888888", { headers: { "User-Agent": "Discordbot/2.0" } })).status()).toBe(503);
 });

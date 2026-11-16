@@ -1,8 +1,10 @@
+import { getPixivArtwork } from "./pixiv-data.mjs";
 import { getPostResult } from "./post-data.mjs";
 import { getYouTubeResult } from "./youtube-data.mjs";
 import { getYouTubeChannel } from "./youtube-channel-data.mjs";
 export async function runHealthChecks(checks) {
   const tasks = checks || {
+    pixiv_artwork: async () => { const result = await getPixivArtwork("109546448"); return Boolean(result.item && result.item.images.length); },
     x: async () => { const signal = AbortSignal.timeout(6500); const result = await getPostResult("jack", "20", (url, options) => fetch(url, { ...options, next: undefined, cache: "no-store", signal: AbortSignal.any([signal, options.signal]) })); return Boolean(result.post); },
     youtube_video: async () => { const result = await getYouTubeResult("watch", "jNQXAC9IVRw"); return Boolean(result.item && !result.stale); },
     youtube_post: async () => { const result = await getYouTubeResult("post", "UgkxvF-Ikos2vcUfuu-7iS9zo0eW2S7c5RYG"); return Boolean(result.item && result.item.images.length && !result.stale); },
