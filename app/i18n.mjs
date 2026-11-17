@@ -25,6 +25,8 @@ export const fr = {
   "Download": "Télécharger",
   "Download images": "Télécharger les images",
   "Close download menu": "Fermer le menu de téléchargement",
+  "Select all": "Tout sélectionner",
+  "Invert selection": "Inverser la sélection",
   "Select images": "Sélectionner les images",
   "Image": "Image",
   "selected": "sélection",

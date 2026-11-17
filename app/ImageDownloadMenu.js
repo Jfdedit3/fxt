@@ -41,6 +41,16 @@ export default function ImageDownloadMenu({ images }) {
     setProgress(null);
   }
 
+  function selectAll() {
+    setSelected(images.map((_, index) => index));
+    setError("");
+  }
+
+  function invertSelection() {
+    setSelected(value => images.map((_, index) => index).filter(index => !value.includes(index)));
+    setError("");
+  }
+
   async function download(event) {
     event.preventDefault();
     if (!selected.length || active.current) return;
@@ -99,6 +109,10 @@ export default function ImageDownloadMenu({ images }) {
         <div className="galleryToolbar">
           <h2 id={title}>{t("Download images")}</h2>
           <button type="button" onClick={() => { cancel(); dialog.current.close(); }} aria-label={t("Close download menu")}>✕</button>
+        </div>
+        <div className="imageDownloadSelection" role="group" aria-label={t("Select images")}>
+          <button className="mediaDownload" type="button" disabled={busy || selected.length === images.length} onClick={selectAll}>{t("Select all")}</button>
+          <button className="mediaDownload" type="button" disabled={busy} onClick={invertSelection}>{t("Invert selection")}</button>
         </div>
         <fieldset className="imageDownloadChoices" disabled={busy} aria-label={t("Select images")}>
           {images.map((image, index) => <label key={image.url} className="imageDownloadChoice">

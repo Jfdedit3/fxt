@@ -60,6 +60,9 @@ footer { flex-wrap:wrap; gap:14px; }
 .imageDownloadButton { background:#151624; cursor:pointer; margin:4px 0 12px; }
 .imageDownloadDialog { width:min(550px,95vw); }
 .imageDownloadDialog h2 { margin:0; font-size:18px; }
+.imageDownloadSelection { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+.imageDownloadSelection button { background:#151624; }
+.imageDownloadSelection button:enabled { cursor:pointer; }
 .imageDownloadChoices { display:grid; grid-template-columns:repeat(auto-fill,minmax(96px,1fr)); gap:8px; max-height:55dvh; overflow:auto; min-width:0; margin:14px 0; padding:4px; border:0; }
 .imageDownloadChoice { display:grid; gap:6px; padding:6px; border:1px solid #454764; border-radius:8px; cursor:pointer; font-size:13px; }
 .imageDownloadChoice:has(input:checked) { border-color:var(--cyan); background:#70e1f519; }
