@@ -1,4 +1,6 @@
+import { readFile } from "node:fs/promises";
 import { test, expect } from "@playwright/test";
+import { unzipSync } from "fflate";
 
 test.beforeEach(async ({ page }) => {
   await page.route("**/*", route => ["image", "media", "font"].includes(route.request().resourceType()) || new URL(route.request().url()).hostname === "fonts.googleapis.com" ? route.abort() : route.continue());
@@ -360,4 +362,33 @@ test("Pixiv image relays return inline previews, downloadable files and genuine 
   expect((await request.get("/artworks/109546448")).status()).toBe(200);
   expect((await request.get("/pixiv/artworks/99999999999")).status()).toBe(404);
   expect((await request.get("/pixiv/artworks/88888888888", { headers: { "User-Agent": "Discordbot/2.0" } })).status()).toBe(503);
+});
+
+test("Download selects original X photos even in panel mode and saves one file or a ZIP", async ({ page }) => {
+  await page.goto("/TakhiAI/status/2121376693227294813");
+  await page.getByRole("button", { name: "Panels (4 images)" }).click();
+  const open = page.getByRole("button", { name: "Download ↓", exact: true });
+  await open.click();
+  const dialog = page.getByRole("dialog", { name: "Download images" });
+  await expect(dialog.getByRole("checkbox")).toHaveCount(12);
+  await expect(dialog.getByRole("button", { name: "Download selected" })).toBeDisabled();
+  await dialog.getByRole("checkbox", { name: "Image 1", exact: true }).check();
+  await dialog.getByRole("checkbox", { name: "Image 2", exact: true }).check();
+  await dialog.getByRole("checkbox", { name: "Image 2", exact: true }).uncheck();
+  await dialog.getByRole("checkbox", { name: "Image 3", exact: true }).check();
+  const zipPending = page.waitForEvent("download");
+  await dialog.getByRole("button", { name: "Download ZIP" }).click();
+  const zip = await zipPending;
+  expect(zip.suggestedFilename()).toBe("fxt-images.zip");
+  const files = unzipSync(await readFile(await zip.path()));
+  expect(Object.keys(files)).toEqual(["fxt-image-1.jpg", "fxt-image-3.jpg"]);
+  for (const bytes of Object.values(files)) expect([...bytes.subarray(0, 2)]).toEqual([255, 216]);
+
+  await open.click();
+  await dialog.getByRole("checkbox", { name: "Image 2", exact: true }).check();
+  const singlePending = page.waitForEvent("download");
+  await dialog.getByRole("button", { name: "Download selected" }).click();
+  const single = await singlePending;
+  expect(single.suggestedFilename()).toBe("fxt-image-2.jpg");
+  expect((await readFile(await single.path())).subarray(0, 2)).toEqual(Buffer.from([255, 216]));
 });

@@ -94,7 +94,7 @@ export default async function PostPage({ params }) {
   const date = post.created_at || post.date;
   const media = mediaOf(post);
   const panelPlan = postMosaicPlan(post);
-  const panels = panelPlan ? panelPlan.groups.map((group, index) => ({ url: mosaicUrl(post, "", index + 1), alt: `Images ${group.first}–${group.last} / ${panelPlan.total}` })) : [];
+  const panels = panelPlan ? panelPlan.groups.map((group, index) => ({ url: mosaicUrl(post, "", index + 1), downloadUrl: mosaicUrl(post, "", index + 1), alt: `Images ${group.first}–${group.last} / ${panelPlan.total}` })) : [];
   const images = media.filter(item => !isVideo(item)).map(item => ({ url: safeExternalUrl(mediaUrl(item)), alt: typeof item.altText === "string" ? item.altText : "" })).filter(item => item.url);
 
   return (
