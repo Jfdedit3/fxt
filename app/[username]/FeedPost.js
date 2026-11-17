@@ -35,7 +35,7 @@ export default function FeedPost({ post }) {
       </div>;
       return null;
     })}
-    <ImageGallery images={images} />
+    <ImageGallery images={images} username={author.screen_name} />
     {post.quote && <Link className="quotedFeedLink" href={href}><T>Includes a quoted post →</T></Link>}
     <PostStatistics post={post} />
     <Link className="detailLink feedOpen" href={href}><T>Open full post →</T></Link>

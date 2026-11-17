@@ -392,7 +392,7 @@ test("Download selects original X photos even in panel mode and saves one file o
   const zipPending = page.waitForEvent("download");
   await dialog.getByRole("button", { name: "Download ZIP" }).click();
   const zip = await zipPending;
-  expect(zip.suggestedFilename()).toBe("fxt-images.zip");
+  expect(zip.suggestedFilename()).toBe("fxt-TakhiAI.zip");
   const files = unzipSync(await readFile(await zip.path()));
   expect(Object.keys(files)).toEqual(["fxt-image-1.jpg", "fxt-image-3.jpg"]);
   for (const bytes of Object.values(files)) expect([...bytes.subarray(0, 2)]).toEqual([255, 216]);

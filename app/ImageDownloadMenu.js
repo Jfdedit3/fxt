@@ -9,6 +9,11 @@ export function imageDownloadHref(image) {
   return image.downloadUrl || `/api/image?url=${encodeURIComponent(image.url)}`;
 }
 
+function archiveFilename(username) {
+  const name = username?.trim().replace(/[^\p{L}\p{M}\p{N}_-]+/gu, "-").replace(/^-+|-+$/g, "").slice(0, 60);
+  return `fxt-${name || "images"}.zip`;
+}
+
 function saveFile(blob, filename) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -20,7 +25,7 @@ function saveFile(blob, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
-export default function ImageDownloadMenu({ images }) {
+export default function ImageDownloadMenu({ images, username }) {
   const { t } = useLanguage();
   const dialog = useRef(null);
   const active = useRef(null);
@@ -85,7 +90,7 @@ export default function ImageDownloadMenu({ images }) {
       if (selected.length > 1) {
         const { zipSync } = await import("fflate");
         signal.throwIfAborted();
-        saveFile(new Blob([zipSync(files, { level: 0 })], { type: "application/zip" }), "fxt-images.zip");
+        saveFile(new Blob([zipSync(files, { level: 0 })], { type: "application/zip" }), archiveFilename(username));
       }
       dialog.current.close();
     } catch (failure) {

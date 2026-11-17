@@ -130,7 +130,7 @@ export default async function PostPage({ params }) {
           }
           return null;
         })}
-        <PostGallery key={post.id} images={images} panels={panels} />
+        <PostGallery key={post.id} images={images} panels={panels} username={handle} />
         <PostDetails post={post} />
         {date && <p className="timestamp"><LocalDate value={date} options={{ dateStyle: "medium", timeStyle: "short" }} /> UTC</p>}
         <PostStatistics post={post} />
