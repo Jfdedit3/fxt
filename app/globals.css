@@ -70,3 +70,6 @@ footer { flex-wrap:wrap; gap:14px; }
 .imageDownloadChoice span { display:flex; align-items:center; gap:4px; }
 .imageDownloadChoice input { accent-color:var(--cyan); }
 .imageDownloadDialog .galleryControls [role=status] { font-size:13px; color:var(--muted); }
+
+/* Image retry UI for large Pixiv galleries */
+.retryImageWrap{display:block;width:100%;min-width:0}.retryImageFallback{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:10px;min-height:100px;padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--muted);font-size:12px;text-align:center}.retryImageFallback button{border:1px solid var(--cyan);border-radius:8px;background:transparent;color:var(--cyan);padding:8px 12px;cursor:pointer}
